@@ -1,7 +1,4 @@
-/* QUIVER page frames and the four "designed states". Uses tokens.css. */
-
-/* ---- Teacher frame: slim left rail with text labels ---- */
-.t-shell { display:grid; grid-template-columns: 220px 1fr; min-height:100vh; }
+ .t-shell { display:grid; grid-template-columns: 220px 1fr; min-height:100vh; }
 .t-rail { border-right:1px solid var(--line); padding:var(--s5) var(--s4); display:flex; flex-direction:column; gap:var(--s5); }
 .t-brand { font-weight:700; letter-spacing:.12em; font-size:var(--t-lg); text-decoration:none; }
 .t-nav { display:flex; flex-direction:column; gap:var(--s1); }
@@ -11,25 +8,21 @@
 .t-user { margin-top:auto; font-size:var(--t-sm); color:var(--ink-2); }
 .t-main { padding:var(--s6) var(--s5); }
 .t-content { max-width:1080px; margin:0 auto; }
-
-/* ---- Student frame: top header, no navigation ---- */
+ 
 .s-header { display:flex; align-items:center; justify-content:space-between;
             padding:var(--s3) var(--s5); border-bottom:1px solid var(--line); }
 .s-brand { font-weight:700; letter-spacing:.12em; }
 .s-who { font-size:var(--t-sm); color:var(--ink-2); }
 .s-main { max-width:760px; margin:0 auto; padding:var(--s6) var(--s5); }
-
-/* ---- Page title + hairline rule ---- */
+ 
 .page-head { display:flex; align-items:baseline; justify-content:space-between;
              padding-bottom:var(--s4); margin-bottom:var(--s5); border-bottom:1px solid var(--line); }
-
-/* ---- Buttons (primary = ink, per the identity) ---- */
+ 
 .btn { font:inherit; padding:var(--s2) var(--s4); border-radius:var(--r-control);
        border:1px solid var(--ink); background:transparent; color:var(--ink); cursor:pointer; text-decoration:none; display:inline-block; }
 .btn--primary { background:var(--ink); color:var(--paper); }
 .btn--danger  { border-color:var(--problem); color:var(--problem); }
-
-/* ---- Designed states ---- */
+ 
 .state { padding:var(--s6) var(--s5); text-align:center; color:var(--ink-2); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .state h3 { color:var(--ink); margin-bottom:var(--s2); font-size:var(--t-lg); }
 .state p  { max-width:48ch; margin:0 auto var(--s4); }
@@ -38,8 +31,7 @@
             animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.5; } }
 .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-
-/* ---- Status page only ---- */
+ 
 .sheet { display:grid; grid-template-columns: 1fr 1fr; gap:var(--s5); }
 .sheet--gray { filter:grayscale(1); }
 .sheet h2 { margin-bottom:var(--s3); }

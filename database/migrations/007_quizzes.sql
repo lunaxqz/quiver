@@ -1,0 +1,26 @@
+-- A quiz lives in one class. Status is stored. Phase (scheduled, open, closed) is computed from the dates.
+CREATE TABLE quizzes (
+  id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  class_id            INT UNSIGNED NOT NULL,
+  created_by          INT UNSIGNED NOT NULL,
+  previous_version_id INT UNSIGNED NULL,
+  title               VARCHAR(160) NOT NULL,
+  instructions        TEXT NULL,
+  status              ENUM('draft','published','archived') NOT NULL DEFAULT 'draft',
+  opens_at            DATETIME NULL,
+  closes_at           DATETIME NULL,
+  duration_min        SMALLINT UNSIGNED NULL,
+  max_attempts        TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  score_policy        ENUM('highest','latest') NOT NULL DEFAULT 'highest',
+  score_release       ENUM('manual','on_submission','scheduled') NOT NULL DEFAULT 'manual',
+  review_release      ENUM('manual','on_submission','scheduled') NOT NULL DEFAULT 'manual',
+  release_at          DATETIME NULL,
+  created_at          DATETIME NOT NULL,
+  updated_at          DATETIME NOT NULL,
+  published_at        DATETIME NULL,
+  archived_at         DATETIME NULL,
+  KEY idx_class_status (class_id, status),
+  FOREIGN KEY (class_id)            REFERENCES classes(id),
+  FOREIGN KEY (created_by)          REFERENCES users(id),
+  FOREIGN KEY (previous_version_id) REFERENCES quizzes(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

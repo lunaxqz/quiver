@@ -11,10 +11,11 @@ require_once __DIR__ . '/states.php';
  *   ...your page content...
  *   teacher_end();
  *
+ * Administrators use teacher_start('Accounts', 'accounts', 'admin') (same frame, different links).
  * Student pages use student_start('Title') ... student_end().
  */
 
-function _page_head(string $title): void
+function _page_head(string $title, array $extraCss = [], string $bodyClass = ''): void
 {
     $t = htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
@@ -22,25 +23,51 @@ function _page_head(string $title): void
        . '<title>' . $t . ' · QUIVER</title>'
        . '<link rel="stylesheet" href="/assets/css/tokens.css">'
        . '<link rel="stylesheet" href="/assets/css/layout.css">'
-       . '</head><body>';
+       . '<link rel="stylesheet" href="/assets/css/forms.css">';
+    foreach ($extraCss as $css) {
+        echo '<link rel="stylesheet" href="' . htmlspecialchars($css, ENT_QUOTES, 'UTF-8') . '">';
+    }
+    echo '</head><body' . ($bodyClass !== '' ? ' class="' . htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8') . '"' : '') . '>';
 }
 
-function teacher_start(string $title, string $active = ''): void
+/** "Sign out" must be a POST with a CSRF ticket (a plain link could be triggered by another site). */
+function _signout_form(): string
+{
+    if (!function_exists('csrf_field')) {
+        return '<a href="/login.php">Sign in</a>';
+    }
+    return '<form class="inline-form" method="post" action="/logout.php">' . csrf_field()
+         . '<button class="linklike" type="submit">Sign out</button></form>';
+}
+
+function _who(): array
+{
+    $u = function_exists('current_user') ? current_user() : null;
+    return $u ?? ['full_name' => 'Not signed in', 'role' => ''];
+}
+
+function teacher_start(string $title, string $active = '', string $role = 'teacher'): void
 {
     _page_head($title);
-    $links = [
-        'overview' => ['Overview',      '/teacher/index.php'],
-        'classes'  => ['Classes',       '/teacher/classes.php'],
-        'bank'     => ['Question bank', '/teacher/bank.php'],
-        'quizzes'  => ['Quizzes',       '/teacher/quizzes.php'],
-    ];
+    $links = $role === 'admin'
+        ? ['accounts' => ['Accounts', '/admin/index.php']]
+        : [
+            'overview' => ['Overview',      '/teacher/index.php'],
+            'classes'  => ['Classes',       '/teacher/classes.php'],
+            'bank'     => ['Question bank', '/teacher/bank.php'],
+            'quizzes'  => ['Quizzes',       '/teacher/quizzes.php'],
+        ];
+    $who = _who();
+    $roleLabel = $who['role'] !== '' ? ucfirst((string) $who['role']) : '';
+
     echo '<div class="t-shell"><aside class="t-rail">'
-       . '<a class="t-brand" href="/teacher/index.php">QUIVER</a><nav class="t-nav" aria-label="Main">';
+       . '<a class="t-brand" href="/">QUIVER</a><nav class="t-nav" aria-label="Main">';
     foreach ($links as $key => [$label, $href]) {
         $cur = $key === $active ? ' aria-current="page"' : '';
         echo '<a href="' . $href . '"' . $cur . '>' . $label . '</a>';
     }
-    echo '</nav><div class="t-user">Signed in as a teacher<br><a href="/logout.php">Sign out</a></div></aside>'
+    echo '</nav><div class="t-user"><strong>' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong><br>'
+       . $roleLabel . ($roleLabel !== '' ? ' · ' : '') . _signout_form() . '</div></aside>'
        . '<main class="t-main"><div class="t-content">'
        . '<div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>';
 }
@@ -53,8 +80,9 @@ function teacher_end(): void
 function student_start(string $title): void
 {
     _page_head($title);
-    echo '<header class="s-header"><span class="s-brand">QUIVER</span>'
-       . '<span class="s-who">Student · <a href="/logout.php">Sign out</a></span></header>'
+    $who = _who();
+    echo '<header class="s-header"><a class="s-brand" href="/">QUIVER</a>'
+       . '<span class="s-who">' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ' · ' . _signout_form() . '</span></header>'
        . '<main class="s-main"><div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>';
 }
 

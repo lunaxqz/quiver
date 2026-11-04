@@ -5,7 +5,7 @@ require_once __DIR__ . '/../app/helpers/layout.php';
 
 student_start('Networking Quiz');
 ?>
-<p style="font-family:var(--font-read); font-size:var(--t-lg);">
+<p class="reading">
   Which layer of the OSI model is responsible for routing packets between networks?
 </p>
 <p><?= status_mark('active', 'In progress') ?></p>

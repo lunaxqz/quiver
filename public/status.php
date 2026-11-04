@@ -29,7 +29,7 @@ teacher_start('Status marks', 'overview');
   <?php endforeach; ?>
 </div>
 
-<h2 style="margin:var(--s6) 0 var(--s3)">Designed states</h2>
+<h2 class="section-title">Designed states</h2>
 <?= state_empty('No questions yet', 'Questions you write will appear here.', 'Write a question', '#') ?>
 <?= state_loading(3) ?>
 <?= state_error('We could not load your classes. Check your connection and try again.', '/status.php') ?>

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * Every page starts with:  require_once __DIR__ . '/../app/bootstrap.php';
- * It sets up UTC time, the error policy, the private settings, and the helpers.
+ * It sets up UTC time, the error policy, the private settings, security headers, the session, and the helpers.
  */
 
 define('APP_ROOT', dirname(__DIR__));
@@ -14,6 +14,19 @@ require_once __DIR__ . '/core/env.php';
 require_once __DIR__ . '/core/db.php';
 require_once __DIR__ . '/core/http.php';
 require_once __DIR__ . '/core/time.php';
+require_once __DIR__ . '/core/session.php';
+require_once __DIR__ . '/core/csrf.php';
+require_once __DIR__ . '/core/errors.php';
+require_once __DIR__ . '/core/auth.php';
+require_once __DIR__ . '/helpers/forms.php';
+
+// Services (AuthService and friends) load themselves the first time they are used.
+spl_autoload_register(function (string $class): void {
+    $file = __DIR__ . '/services/' . $class . '.php';
+    if (is_file($file)) {
+        require_once $file;
+    }
+});
 
 // ---- Error policy: show details only while developing, always write to a log ----
 error_reporting(E_ALL);
@@ -54,4 +67,10 @@ set_exception_handler(function (Throwable $t) use ($showDetails): void {
 
 if (isset($envProblem)) {
     throw new RuntimeException($envProblem);
+}
+
+// ---- Web requests only (not the terminal scripts): security headers and the session ----
+if (PHP_SAPI !== 'cli') {
+    send_security_headers();
+    session_boot();
 }

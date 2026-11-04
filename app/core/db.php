@@ -13,7 +13,7 @@ function db_connect(?string $user, ?string $pass): PDO
     $dsn = sprintf(
         'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
         env('DB_HOST', '127.0.0.1'),
-        env('DB_PORT', '3306'),
+        env('DB_PORT', '3307'),
         env('DB_NAME', 'quiver')
     );
     $pdo = new PDO($dsn, $user, $pass, [

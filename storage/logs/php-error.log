@@ -1,0 +1,6 @@
+[03-Nov-2026 23:20:19 UTC] PDOException: SQLSTATE[HY000] [1045] Access denied for user 'quiver_app'@'localhost' (using password: YES) in C:\quiver\app\core\db.php:19
+[03-Nov-2026 23:20:54 UTC] PDOException: SQLSTATE[HY000] [1045] Access denied for user 'quiver_app'@'localhost' (using password: YES) in C:\quiver\app\core\db.php:19
+[03-Nov-2026 23:23:37 UTC] PDOException: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it in C:\quiver\app\core\db.php:19
+[03-Nov-2026 23:24:04 UTC] PDOException: SQLSTATE[HY000] [1044] Access denied for user 'quiver_app'@'localhost' to database 'quiver' in C:\quiver\app\core\db.php:19
+[03-Nov-2026 23:25:46 UTC] PDOException: SQLSTATE[HY000] [1044] Access denied for user 'quiver_app'@'localhost' to database 'quiver' in C:\quiver\app\core\db.php:19
+[03-Nov-2026 23:26:06 UTC] PDOException: SQLSTATE[HY000] [1044] Access denied for user 'quiver_app'@'localhost' to database 'quiver' in C:\quiver\app\core\db.php:19

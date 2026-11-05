@@ -1,0 +1,45 @@
+/* Teacher classes screen (Day 6). Two columns: pick/create on the left, the chosen class on the right. */
+.cls-grid { display:grid; grid-template-columns: 300px 1fr; gap:var(--s5); align-items:start; }
+.cls-col  { display:flex; flex-direction:column; gap:var(--s5); min-width:0; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:var(--s5); }
+.card h2 { font-family:var(--font-read); font-weight:500; font-size:22px; margin-bottom:var(--s3); }
+.card__eyebrow { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin:0 0 var(--s2); }
+.card__row { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--s4); }
+.page-sub { color:var(--ink-3); font-size:var(--t-sm); margin:calc(-1 * var(--s4)) 0 var(--s5); }
+
+.cls-list { list-style:none; margin:var(--s3) 0; padding:0; display:flex; flex-direction:column; gap:var(--s2); }
+.cls-item { display:block; padding:var(--s3); border-radius:10px; text-decoration:none; color:var(--ink); }
+.cls-item:hover { background:rgba(27,26,23,.05); }
+.cls-item strong { display:block; font-size:var(--t-sm); }
+.cls-item span { font-size:12px; color:var(--ink-3); }
+.cls-item[aria-current='page'] { background:var(--ink); color:var(--paper); }
+.cls-item[aria-current='page'] span { color:#CFCBC2; }
+
+.join-code { font-family:ui-monospace, Consolas, monospace; font-size:26px; letter-spacing:.08em; margin:var(--s1) 0 var(--s2); }
+.join-code--off { color:var(--ink-3); text-decoration:line-through; }
+.btn-row { display:flex; flex-wrap:wrap; gap:var(--s2); }
+.btn--pill { border-radius:999px; }
+.btn--sm { padding:var(--s1) var(--s3); font-size:var(--t-sm); }
+.btn--quiet { border-color:var(--line); background:var(--surface); }
+.btn[disabled] { opacity:.5; cursor:default; }
+
+.roster-tools { display:grid; grid-template-columns: 1fr 1fr auto; gap:var(--s3); align-items:end; margin-bottom:var(--s4); }
+.roster-tools .field { margin:0; }
+.roster-tools form { display:contents; }
+.tbl { width:100%; border-collapse:collapse; font-size:var(--t-sm); }
+.tbl th { text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:500; padding:var(--s2) 0; border-bottom:1px solid var(--line); }
+.tbl td { padding:var(--s4) 0; border-bottom:1px solid var(--line); vertical-align:middle; }
+.tbl td.actions { text-align:right; white-space:nowrap; }
+.tbl-foot { display:flex; gap:var(--s3); font-size:12px; color:var(--ink-3); margin-top:var(--s4); }
+.tbl-foot a { color:var(--ink-2); }
+.foot-note { font-size:12px; color:var(--ink-3); margin:0; }
+.archive-bar { display:flex; align-items:center; justify-content:flex-end; gap:var(--s4); padding:0 var(--s2); }
+.temp-pw { font-family:ui-monospace, Consolas, monospace; font-size:18px; letter-spacing:.06em; }
+.field select, select.input { appearance:auto; }
+.rule { border:0; border-top:1px solid var(--line); margin:var(--s4) 0; }
+.row2 { display:grid; grid-template-columns:1fr 1fr; gap:var(--s3); }
+
+@media (max-width: 900px) {
+  .cls-grid { grid-template-columns: 1fr; }
+  .roster-tools { grid-template-columns: 1fr; }
+}

@@ -58,13 +58,18 @@ function _who(): array
     return $u ?? ['full_name' => 'Not signed in', 'role' => ''];
 }
 
-function teacher_start(string $title, string $active = '', string $role = 'teacher'): void
+function teacher_start(string $title, string $active = '', string $role = 'teacher', array $extraCss = []): void
 {
-    _page_head($title);
+    _page_head($title, $extraCss);
+    $links = $role === 'admin'
+      
+function teacher_start(string $title, string $active = '', string $role = 'teacher', array $extraCss = []): void
+{
+    _page_head($title, $extraCss);
     $links = $role === 'admin'
         ? [
             'accounts' => ['Accounts', '/admin/index.php'],
-            'classes'  => ['Classes',  '/admin/index.php#class-records'],
+            'classes'  => ['Classes',  '/admin/classes.php'],
         ]
         : [
             'overview' => ['Overview',      '/teacher/index.php'],
@@ -85,8 +90,7 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
        . $roleLabel . ($roleLabel !== '' ? ' · ' : '') . _signout_form()
        . '<br><a href="/change_password.php">Change password</a></div></aside>'
        . '<main class="t-main"><div class="t-content">'
-       . '<div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>'
-       . _flash_html();
+       . '<div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>';
 }
 
 function teacher_end(): void

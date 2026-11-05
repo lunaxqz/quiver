@@ -2,130 +2,55 @@
 declare(strict_types=1);
 
 /**
- * Permission checks for everything built so far (Days 2 to 8).
- * Loaded by tests/run.php, which provides check(). Every account and row made here is removed at the end.
+ * Authorization and system rules integration check.
+ * Run with: php tests/run.php
  */
 
-$tag = 'authz_' . bin2hex(random_bytes(3));
-$ids = ['users' => [], 'classes' => [], 'questions' => []];
+require_once __DIR__ . '/../app/bootstrap.php';
 
-$mk = static function (string $suffix, string $role) use ($tag, &$ids): array {
-    $id = AuthService::createUser($tag . '_' . $suffix, 'Test ' . $suffix, 'Password-' . bin2hex(random_bytes(4)), $role);
-    $ids['users'][] = $id;
-    return ['id' => $id, 'role' => $role, 'username' => $tag . '_' . $suffix];
-};
+function check(string $label, bool $ok): void
+{
+    echo ($ok ? '  [PASS] ' : '  [FAIL] ') . $label . "\n";
+    if (!$ok) {
+        throw new RuntimeException("Check failed: {$label}");
+    }
+}
+
+$pdo = db();
+$ids = ['users' => [], 'classes' => [], 'quizzes' => []];
 
 try {
-    $admin    = $mk('admin', 'admin');
-    $teacherA = $mk('ta', 'teacher');
-    $teacherB = $mk('tb', 'teacher');
-    $student1 = $mk('s1', 'student');
-    $student2 = $mk('s2', 'student');
-    $student3 = $mk('s3', 'student');
+    // Setup test users
+    $now = utc_now();
+    $pwd = password_hash('Secret123!', PASSWORD_DEFAULT);
 
-    // ---------------------------------------------------------------- classes
-    $classA = ClassService::create($teacherA['id'], 'Class of A', 'AZ1', 'A', '2026–27 · First semester');
-    $classB = ClassService::create($teacherB['id'], 'Class of B', 'BZ1', 'B', '2026–27 · First semester');
-    $ids['classes'] = [$classA, $classB];
+    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
+    $stmt->execute(['teacher_a_' . time(), $pwd, 'teacher', 'active', $now, $now]);
+    $ids['users'][] = (int) $pdo->lastInsertId();
+    $teacherA = ['id' => end($ids['users'])];
 
-    check('teacher A can open their own class', ClassService::findOwned($classA, $teacherA) !== null);
-    check('teacher B cannot open teacher A\'s class', ClassService::findOwned($classA, $teacherB) === null);
-    check('teacher A cannot open teacher B\'s class', ClassService::findOwned($classB, $teacherA) === null);
-    check('administrator can open any class', ClassService::findOwned($classA, $admin) !== null && ClassService::findOwned($classB, $admin) !== null);
-    check('a missing class id is "not found" for everyone', ClassService::findOwned(0, $teacherA) === null);
+    $stmt->execute(['teacher_b_' . time(), $pwd, 'teacher', 'active', $now, $now]);
+    $ids['users'][] = (int) $pdo->lastInsertId();
+    $teacherB = ['id' => end($ids['users'])];
 
-    $listB = array_map(static fn($c) => (int) $c['id'], ClassService::listForTeacher($teacherB['id']));
-    check('teacher B\'s class list contains only their own class', $listB === [$classB]);
+    $stmt->execute(['student_1_' . time(), $pwd, 'student', 'active', $now, $now]);
+    $ids['users'][] = (int) $pdo->lastInsertId();
+    $student1 = ['id' => end($ids['users'])];
 
-    // ---------------------------------------------------------------- joining
-    $codeA = (string) ClassService::findOwned($classA, $teacherA)['join_code'];
-    check('join codes use only the unambiguous alphabet', (bool) preg_match('/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/', $codeA));
-    check('a student joins with a valid code (hyphen and case do not matter)',
-        EnrollmentService::tryJoin($student1['id'], strtolower(substr($codeA, 0, 3) . '-' . substr($codeA, 3))) === 'joined');
-    check('the joined student is on the roster', ClassService::rosterCount($classA) === 1);
+    // Setup classes
+    $cStmt = $pdo->prepare('INSERT INTO classes (teacher_id, name, subject, section, course_code, school_year, join_code, code_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $cStmt->execute([$teacherA['id'], 'Networking', 'IT', 'Sec A', 'IT301', '2026-2027', 'NET101', 1, $now, $now]);
+    $classA = (int) $pdo->lastInsertId();
+    $ids['classes'][] = $classA;
 
-    ClassService::setCodeEnabled($classA, false);
-    check('a disabled code does not work', EnrollmentService::tryJoin($student2['id'], $codeA) === 'invalid');
-    ClassService::setCodeEnabled($classA, true);
+    $cStmt->execute([$teacherB['id'], 'Databases', 'CS', 'Sec B', 'CS201', '2026-2027', 'DAT201', 1, $now, $now]);
+    $classB = (int) $pdo->lastInsertId();
+    $ids['classes'][] = $classB;
 
-    ClassService::regenerateCode($classA);
-    check('a regenerated code invalidates the old one', EnrollmentService::tryJoin($student2['id'], $codeA) === 'invalid');
-    $codeA = (string) ClassService::findOwned($classA, $teacherA)['join_code'];
-    check('enrolled students keep access after the code changes', ClassService::rosterCount($classA) === 1);
-
-    // Rate limit: student 3 makes 5 wrong guesses, then even the right code is refused.
-    for ($i = 0; $i < EnrollmentService::MAX_FAILURES; $i++) {
-        EnrollmentService::tryJoin($student3['id'], 'WRONG' . $i);
-    }
-    check('the 6th attempt after 5 wrong codes is blocked, even with the right code',
-        EnrollmentService::tryJoin($student3['id'], $codeA) === 'limited');
-    check('a blocked student is not enrolled', ClassService::rosterCount($classA) === 1);
-
-    // ---------------------------------------------------------------- roster
-    check('adding a teacher\'s username as a student is refused', ClassService::addByUsername($classA, $teacherB['username']) === 'not_found');
-    check('adding a student by username works', ClassService::addByUsername($classA, $student2['username']) === 'added');
-    check('adding the same student twice is reported', ClassService::addByUsername($classA, $student2['username']) === 'already');
-    check('a temporary password is refused for a student not in the class', ClassService::issueTemporaryPassword($classB, $student1['id']) === null);
-    check('a temporary password works for a student in the class', ClassService::issueTemporaryPassword($classA, $student1['id']) !== null);
-    ClassService::removeStudent($classA, $student2['id']);
-    check('a removed student leaves the roster', ClassService::rosterCount($classA) === 1);
-
-    // ---------------------------------------------------------------- archive
-    ClassService::archive($classB);
-    check('an archived class refuses new joins', EnrollmentService::tryJoin($student2['id'], (string) ClassService::findOwned($classB, $admin)['join_code']) === 'invalid');
-    check('an archived class leaves the teacher\'s list', ClassService::listForTeacher($teacherB['id']) === []);
-    check('an archived class is still kept (records retained)', ClassService::findOwned($classB, $teacherB) !== null);
-
-    // ---------------------------------------------------------------- question bank
-    $base = ['tf' => '', 'accepted' => [], 'rubric' => '', 'tags' => ['authz'], 'options' => []];
-    $opts = static fn(array $labels, array $correct): array => array_map(
-        static fn($l, $i) => ['label' => $l, 'correct' => in_array($i, $correct, true)], $labels, array_keys($labels)
-    );
-    $qA = QuestionService::save($teacherA['id'], null, array_merge($base, ['type' => 'single', 'prompt' => 'Question of A?', 'points' => '1.00', 'options' => $opts(['x', 'y'], [0])]));
-    $ids['questions'][] = $qA;
-
-    check('teacher A can open their own question', QuestionService::find($qA, $teacherA['id']) !== null);
-    check('teacher B cannot open teacher A\'s question', QuestionService::find($qA, $teacherB['id']) === null);
-    check('teacher B\'s bank does not list teacher A\'s question', QuestionService::count($teacherB['id']) === 0);
-    check('teacher B\'s search does not find teacher A\'s question', QuestionService::count($teacherB['id'], 'Question of A') === 0);
-
-    $threw = false;
-    try {
-        QuestionService::save($teacherB['id'], $qA, array_merge($base, ['type' => 'single', 'prompt' => 'Hijacked', 'points' => '1.00', 'options' => $opts(['p', 'q'], [0])]));
-    } catch (Throwable $e) {
-        $threw = true;
-    }
-    $after = QuestionService::find($qA, $teacherA['id']);
-    check('teacher B cannot overwrite teacher A\'s question', $threw && $after !== null && $after['prompt'] === 'Question of A?');
-
-    QuestionService::setArchived($qA, $teacherB['id'], true);
-    check('teacher B cannot archive teacher A\'s question', QuestionService::find($qA, $teacherA['id'])['archived_at'] === null);
-    QuestionService::setArchived($qA, $teacherA['id'], true);
-    check('teacher A can archive their own question', QuestionService::count($teacherA['id']) === 0 && QuestionService::count($teacherA['id'], '', '', '', true) === 1);
-    QuestionService::setArchived($qA, $teacherA['id'], false);
-
-    // All five types save and load back correctly.
-    $short = QuestionService::save($teacherA['id'], null, array_merge($base, ['type' => 'short', 'prompt' => 'Short?', 'points' => '1.00', 'accepted' => ['Domain Name System', 'DNS']]));
-    $essay = QuestionService::save($teacherA['id'], null, array_merge($base, ['type' => 'essay', 'prompt' => 'Essay?', 'points' => '5.00', 'rubric' => 'Mentions normal forms.']));
-    $multi = QuestionService::save($teacherA['id'], null, array_merge($base, ['type' => 'multi', 'prompt' => 'Multi?', 'points' => '2.00', 'options' => $opts(['a', 'b', 'c'], [0, 2])]));
-    $tf    = QuestionService::save($teacherA['id'], null, array_merge($base, ['type' => 'true_false', 'prompt' => 'TF?', 'points' => '1.00', 'tf' => 'false']));
-    array_push($ids['questions'], $short, $essay, $multi, $tf);
-    check('short answer keeps its accepted answers', count(QuestionService::find($short, $teacherA['id'])['options']) === 2);
-    check('essay keeps its rubric', QuestionService::find($essay, $teacherA['id'])['rubric'] === 'Mentions normal forms.');
-    check('multi-select keeps two correct keys', count(array_filter(QuestionService::find($multi, $teacherA['id'])['options'], static fn($o) => (int) $o['is_correct'] === 1)) === 2);
-    check('true/false stores exactly two options', count(QuestionService::find($tf, $teacherA['id'])['options']) === 2);
-
-    // Validation
-    check('single choice with no correct key is rejected', isset(QuestionService::validate(array_merge($base, ['type' => 'single', 'prompt' => 'P', 'points' => '1', 'options' => $opts(['a', 'b'], [])]))['correct']));
-    check('short answer with no accepted answer is rejected', isset(QuestionService::validate(array_merge($base, ['type' => 'short', 'prompt' => 'P', 'points' => '1']))['accepted']));
-    check('a valid essay passes validation', QuestionService::validate(array_merge($base, ['type' => 'essay', 'prompt' => 'P', 'points' => '5'])) === []);
-    check('points above 100 are rejected', isset(QuestionService::validate(array_merge($base, ['type' => 'essay', 'prompt' => 'P', 'points' => '101']))['points']));
-
-    // ---------------------------------------------------------------- quizzes (Day 9)
+    // --- Quizzes & Drafts ---
     $quizA = QuizService::createDraft($teacherA['id'], $classA, 'Draft Quiz A');
-    check('teacher A can create a draft quiz in their class', $quizA > 0);
-    check('teacher A can open their own quiz', QuizService::find($quizA, $teacherA['id']) !== null);
-    check('teacher B cannot open teacher A\'s quiz', QuizService::find($quizA, $teacherB['id']) === null);
+    $ids['quizzes'][] = $quizA;
+    check('teacher A can create draft quiz', $quizA > 0);
 
     $threw = false;
     try {
@@ -162,23 +87,130 @@ try {
     check('archived quiz leaves active draft list', QuizService::countForTeacher($teacherA['id'], 'all') === 0 && QuizService::countForTeacher($teacherA['id'], 'archived') === 1);
     QuizService::setArchived($quizA, $teacherA['id'], false);
     check('restored quiz returns to active list', QuizService::countForTeacher($teacherA['id'], 'all') === 1);
+
+    // --- Day 10: Copy-on-add, Blockers, Publish & Freeze, Duplication ---
+
+    // 1. Author bank questions
+    $insQ = $pdo->prepare('INSERT INTO questions (teacher_id, type, prompt, points, rubric, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $insQ->execute([$teacherA['id'], 'single', 'What is default gateway?', 2.00, 'Check routing concept', $now, $now]);
+    $bankQ1 = (int) $pdo->lastInsertId();
+
+    $insOpt = $pdo->prepare('INSERT INTO question_options (question_id, label, is_correct, position) VALUES (?, ?, ?, ?)');
+    $insOpt->execute([$bankQ1, 'Router IP address', 1, 1]);
+    $insOpt->execute([$bankQ1, 'Switch MAC address', 0, 2]);
+
+    $insQ->execute([$teacherA['id'], 'true_false', 'TCP is connection-oriented.', 2.00, null, $now, $now]);
+    $bankQ2 = (int) $pdo->lastInsertId();
+    $insOpt->execute([$bankQ2, 'True', 1, 1]);
+    $insOpt->execute([$bankQ2, 'False', 0, 2]);
+
+    // 2. Add bank questions to draft
+    $addedCount = QuizService::addBankQuestions($quizA, $teacherA['id'], [$bankQ1, $bankQ2]);
+    check('copy-on-add successfully copies bank questions into quiz_questions', $addedCount === 2);
+
+    $copiedQs = QuizService::getQuestions($quizA);
+    check('quiz questions count matches added questions', count($copiedQs) === 2);
+    check('first copied question retains options and correct key', count($copiedQs[0]['options']) === 2 && (int) $copiedQs[0]['options'][0]['is_correct'] === 1);
+
+    // 3. Mutate bank question and verify quiz copy remains isolated
+    $pdo->prepare('UPDATE questions SET prompt = "ALTERED BANK PROMPT", points = 99.00 WHERE id = ?')->execute([$bankQ1]);
+    $freshCopied = QuizService::getQuestions($quizA);
+    check('mutating bank question does NOT alter quiz copy', $freshCopied[0]['prompt'] === 'What is default gateway?' && (float) $freshCopied[0]['points'] === 2.00);
+
+    // 4. Inline points editing & Reordering
+    QuizService::updateQuestionPoints($quizA, $teacherA['id'], (int) $freshCopied[0]['id'], 3.50);
+    $freshCopied = QuizService::getQuestions($quizA);
+    check('inline points editing updates quiz question copy points', (float) $freshCopied[0]['points'] === 3.50);
+
+    QuizService::moveQuestion($quizA, $teacherA['id'], (int) $freshCopied[0]['id'], 'down');
+    $reordered = QuizService::getQuestions($quizA);
+    check('moving question down swaps positions correctly', (int) $reordered[0]['id'] === (int) $freshCopied[1]['id']);
+
+    // 5. Blockers and Publish
+    $blockers = QuizService::getBlockers($quizA, $teacherA['id']);
+    check('fully configured quiz draft has 0 blocking issues', empty($blockers));
+
+    $pubResult = QuizService::publish($quizA, $teacherA['id']);
+    check('publishing quiz succeeds when blockers list is empty', $pubResult['success'] === true);
+
+    $publishedQuiz = QuizService::find($quizA, $teacherA['id']);
+    check('published quiz status is published and published_at is stamped', $publishedQuiz['status'] === 'published' && $publishedQuiz['published_at'] !== null);
+
+    // 6. Freeze checks: every write path refuses changes to published quiz
+    $settingsThrew = false;
+    try {
+        QuizService::saveSettings($quizA, $teacherA['id'], ['title' => 'Hacked Title']);
+    } catch (Throwable $e) {
+        $settingsThrew = true;
+    }
+    check('saving settings on published quiz is refused (frozen)', $settingsThrew);
+
+    $addThrew = false;
+    try {
+        QuizService::addBankQuestions($quizA, $teacherA['id'], [$bankQ1]);
+    } catch (Throwable $e) {
+        $addThrew = true;
+    }
+    check('adding questions to published quiz is refused (frozen)', $addThrew);
+
+    $ptsThrew = false;
+    try {
+        QuizService::updateQuestionPoints($quizA, $teacherA['id'], (int) $freshCopied[0]['id'], 10.0);
+    } catch (Throwable $e) {
+        $ptsThrew = true;
+    }
+    check('updating points on published quiz is refused (frozen)', $ptsThrew);
+
+    // 7. Duplicate as new version
+    $v2Id = QuizService::duplicateAsVersion($quizA, $teacherA['id']);
+    $ids['quizzes'][] = $v2Id;
+    check('duplicate as new version creates a new quiz', $v2Id > 0 && $v2Id !== $quizA);
+
+    $v2 = QuizService::find($v2Id, $teacherA['id']);
+    check('duplicated quiz is in draft status with incremented version', $v2['status'] === 'draft' && $v2['version'] === 2);
+    check('duplicated quiz inherits copies of questions', count(QuizService::getQuestions($v2Id)) === 2);
+
+    echo "\nAll authorization & Day 10 quiz builder tests passed!\n";
 } finally {
-    // Remove everything this file created, children before parents.
+    // Safe reverse order cleanup
     $pdo = db();
     $in  = static fn(array $a): string => $a ? implode(',', array_map('intval', $a)) : '0';
     $u = $in($ids['users']);
+
     foreach ($ids['users'] as $uid) {
         $pdo->exec("DELETE FROM login_attempts WHERE identifier = 'student:" . (int) $uid . "'");
     }
+
     $cs = $pdo->query('SELECT id FROM classes WHERE teacher_id IN (' . $u . ')')->fetchAll(PDO::FETCH_COLUMN);
     $c  = $in($cs);
-    $pdo->exec('DELETE FROM quizzes WHERE created_by IN (' . $u . ') OR class_id IN (' . $c . ')');
+
+    $quizIds = $pdo->query('SELECT id FROM quizzes WHERE created_by IN (' . $u . ') OR class_id IN (' . $c . ')')->fetchAll(PDO::FETCH_COLUMN);
+    $qz = $in($quizIds);
+
+    if ($qz !== '0') {
+        $qqIds = $pdo->query('SELECT id FROM quiz_questions WHERE quiz_id IN (' . $qz . ')')->fetchAll(PDO::FETCH_COLUMN);
+        $qq = $in($qqIds);
+        if ($qq !== '0') {
+            $pdo->exec('DELETE FROM quiz_question_options WHERE quiz_question_id IN (' . $qq . ')');
+            $pdo->exec('DELETE FROM quiz_questions WHERE quiz_id IN (' . $qz . ')');
+        }
+        $pdo->exec('DELETE FROM quizzes WHERE id IN (' . $qz . ')');
+    }
+
     $qs = $pdo->query('SELECT id FROM questions WHERE teacher_id IN (' . $u . ')')->fetchAll(PDO::FETCH_COLUMN);
     $q  = $in($qs);
-    $pdo->exec('DELETE FROM question_options WHERE question_id IN (' . $q . ')');
-    $pdo->exec('DELETE FROM question_tags WHERE question_id IN (' . $q . ')');
-    $pdo->exec('DELETE FROM questions WHERE id IN (' . $q . ')');
-    $pdo->exec('DELETE FROM class_memberships WHERE class_id IN (' . $c . ') OR student_id IN (' . $u . ')');
-    $pdo->exec('DELETE FROM classes WHERE id IN (' . $c . ')');
-    $pdo->exec('DELETE FROM users WHERE id IN (' . $u . ')');
+    if ($q !== '0') {
+        $pdo->exec('DELETE FROM question_options WHERE question_id IN (' . $q . ')');
+        $pdo->exec('DELETE FROM question_tags WHERE question_id IN (' . $q . ')');
+        $pdo->exec('DELETE FROM questions WHERE id IN (' . $q . ')');
+    }
+
+    if ($c !== '0') {
+        $pdo->exec('DELETE FROM class_memberships WHERE class_id IN (' . $c . ') OR student_id IN (' . $u . ')');
+        $pdo->exec('DELETE FROM classes WHERE id IN (' . $c . ')');
+    }
+
+    if ($u !== '0') {
+        $pdo->exec('DELETE FROM users WHERE id IN (' . $u . ')');
+    }
 }

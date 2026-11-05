@@ -98,7 +98,7 @@ teacher_start(
     <?= field('q', 'Search quizzes', 'text', ['value' => $q, 'placeholder' => 'Title or class', 'maxlength' => 100]) ?>
     <div class="field">
       <label class="field__label" for="class_id">Class</label>
-      <select class="input" id="class_id" name="class_id" onchange="this.form.submit()">
+      <select class="input" id="class_id" name="class_id" data-autosubmit>
         <option value="">All your classes</option>
         <?php foreach ($classes as $c): ?>
           <option value="<?= (int) $c['id'] ?>"<?= (string) $c['id'] === $classId ? ' selected' : '' ?>>
@@ -109,7 +109,7 @@ teacher_start(
     </div>
     <div class="field">
       <label class="field__label" for="state">Window state</label>
-      <select class="input" id="state" name="state" onchange="this.form.submit()">
+      <select class="input" id="state" name="state" data-autosubmit>
         <option value="">All states</option>
         <option value="open"<?= $state === 'open' ? ' selected' : '' ?>>Open</option>
         <option value="scheduled"<?= $state === 'scheduled' ? ' selected' : '' ?>>Scheduled</option>
@@ -256,11 +256,13 @@ teacher_start(
 <!-- Modal: + Create quiz -->
 <div class="modal-overlay is-hidden" id="create-modal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--s2);">
-      <h2 id="modal-title" style="margin: 0;">Create a new quiz</h2>
-      <button type="button" class="linklike" data-close-modal style="font-size: 22px; line-height: 1; cursor: pointer; color: var(--ink-3);" aria-label="Close dialog">×</button>
+    <div class="modal-head-row">
+      <div>
+        <h2 id="modal-title">Create a new quiz</h2>
+        <p>Give your quiz a title and select the class it belongs to. You can adjust settings and add questions next.</p>
+      </div>
+      <button type="button" class="modal-close-btn" data-close-modal aria-label="Close dialog">×</button>
     </div>
-    <p>Give your quiz a title and select the class it belongs to. You can adjust settings and add questions next.</p>
     <form method="post" action="/teacher/quizzes.php">
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="create_draft">
@@ -283,49 +285,5 @@ teacher_start(
   </div>
 </div>
 
-<script>
-(function () {
-  var modal = document.getElementById('create-modal');
-  if (!modal) return;
-
-  function openModal() {
-    modal.hidden = false;
-    modal.classList.remove('is-hidden');
-    var input = modal.querySelector('input[name="title"]');
-    if (input) { input.focus(); }
-  }
-
-  function closeModal() {
-    modal.hidden = true;
-    modal.classList.add('is-hidden');
-  }
-
-  document.querySelectorAll('[data-open-modal="create-modal"]').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      openModal();
-    });
-  });
-
-  modal.querySelectorAll('[data-close-modal]').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      closeModal();
-    });
-  });
-
-  modal.addEventListener('click', function (e) {
-    if (e.target === modal) {
-      closeModal();
-    }
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !modal.hidden) {
-      closeModal();
-    }
-  });
-})();
-</script>
-
+<script src="/assets/js/quizzes.js" defer></script>
 <?php teacher_end();

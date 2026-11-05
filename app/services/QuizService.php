@@ -489,4 +489,373 @@ final class QuizService
             throw $e;
         }
     }
+
+    /**
+     * Returns all copied questions for a quiz with their options.
+     */
+    public static function getQuestions(int $quizId): array
+    {
+        $stmt = db()->prepare(
+            'SELECT * FROM quiz_questions WHERE quiz_id = ? ORDER BY position ASC'
+        );
+        $stmt->execute([$quizId]);
+        $questions = $stmt->fetchAll();
+
+        $optStmt = db()->prepare(
+            'SELECT * FROM quiz_question_options WHERE quiz_question_id = ? ORDER BY position ASC'
+        );
+
+        foreach ($questions as &$q) {
+            $optStmt->execute([(int) $q['id']]);
+            $q['options'] = $optStmt->fetchAll();
+        }
+        unset($q);
+
+        return $questions;
+    }
+
+    /**
+     * Returns blocking issues for publishing.
+     */
+    public static function getBlockers(int $quizId, int $teacherId): array
+    {
+        $quiz = self::find($quizId, $teacherId);
+        if (!$quiz) {
+            return ['Quiz not found or not owned.'];
+        }
+        $questions = self::getQuestions($quizId);
+        return quiz_blockers($quiz, $questions);
+    }
+
+    /**
+     * Adds questions from the question bank to the quiz draft.
+     * Deep-copies prompt, points, type, rubric, and options.
+     */
+    public static function addBankQuestions(int $quizId, int $teacherId, array $bankQuestionIds): int
+    {
+        $quiz = self::find($quizId, $teacherId);
+        if (!$quiz) {
+            throw new RuntimeException('Quiz not found or not owned.');
+        }
+        if ($quiz['status'] !== 'draft') {
+            throw new RuntimeException('Published quizzes are frozen and cannot be edited. Duplicate as a new version instead.');
+        }
+
+        if (empty($bankQuestionIds)) {
+            return 0;
+        }
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $posStmt = $pdo->prepare('SELECT COALESCE(MAX(position), 0) FROM quiz_questions WHERE quiz_id = ?');
+            $posStmt->execute([$quizId]);
+            $curPos = (int) $posStmt->fetchColumn();
+
+            $qBankStmt = $pdo->prepare(
+                'SELECT * FROM questions WHERE id = ? AND teacher_id = ? AND archived_at IS NULL'
+            );
+            $optBankStmt = $pdo->prepare(
+                'SELECT * FROM question_options WHERE question_id = ? ORDER BY position ASC'
+            );
+
+            $insQ = $pdo->prepare(
+                'INSERT INTO quiz_questions (quiz_id, source_question_id, position, type, prompt, points, rubric)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)'
+            );
+            $insOpt = $pdo->prepare(
+                'INSERT INTO quiz_question_options (quiz_question_id, label, is_correct, position)
+                 VALUES (?, ?, ?, ?)'
+            );
+
+            $count = 0;
+            foreach ($bankQuestionIds as $bId) {
+                $bId = (int) $bId;
+                if ($bId <= 0) {
+                    continue;
+                }
+
+                $qBankStmt->execute([$bId, $teacherId]);
+                $bankQ = $qBankStmt->fetch();
+                if (!$bankQ) {
+                    continue;
+                }
+
+                $curPos++;
+                $insQ->execute([
+                    $quizId,
+                    $bankQ['id'],
+                    $curPos,
+                    $bankQ['type'],
+                    $bankQ['prompt'],
+                    $bankQ['points'],
+                    $bankQ['rubric'],
+                ]);
+                $newQId = (int) $pdo->lastInsertId();
+
+                $optBankStmt->execute([$bId]);
+                $bankOpts = $optBankStmt->fetchAll();
+                foreach ($bankOpts as $opt) {
+                    $insOpt->execute([
+                        $newQId,
+                        $opt['label'],
+                        $opt['is_correct'],
+                        $opt['position'],
+                    ]);
+                }
+                $count++;
+            }
+
+            $pdo->prepare('UPDATE quizzes SET updated_at = ? WHERE id = ?')->execute([utc_now(), $quizId]);
+            $pdo->commit();
+            return $count;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Updates inline points for a question in a draft quiz.
+     */
+    public static function updateQuestionPoints(int $quizId, int $teacherId, int $quizQuestionId, float $points): void
+    {
+        $quiz = self::find($quizId, $teacherId);
+        if (!$quiz) {
+            throw new RuntimeException('Quiz not found or not owned.');
+        }
+        if ($quiz['status'] !== 'draft') {
+            throw new RuntimeException('Published quizzes are frozen and cannot be edited. Duplicate as a new version instead.');
+        }
+
+        $points = max(0.0, round($points, 2));
+
+        $stmt = db()->prepare(
+            'UPDATE quiz_questions SET points = ? WHERE id = ? AND quiz_id = ?'
+        );
+        $stmt->execute([$points, $quizQuestionId, $quizId]);
+
+        db()->prepare('UPDATE quizzes SET updated_at = ? WHERE id = ?')->execute([utc_now(), $quizId]);
+    }
+
+    /**
+     * Reorders questions within a draft quiz.
+     */
+    public static function reorderQuestions(int $quizId, int $teacherId, array $orderedIds): void
+    {
+        $quiz = self::find($quizId, $teacherId);
+        if (!$quiz || $quiz['status'] !== 'draft') {
+            throw new RuntimeException('Cannot reorder: quiz is frozen or not found.');
+        }
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            // Negative pass to avoid uq_position collisions
+            $negStmt = $pdo->prepare('UPDATE quiz_questions SET position = ? WHERE id = ? AND quiz_id = ?');
+            foreach ($orderedIds as $idx => $qId) {
+                $negStmt->execute([-( ($idx + 1) * 100 ), (int) $qId, $quizId]);
+            }
+
+            // Positive final pass
+            $posStmt = $pdo->prepare('UPDATE quiz_questions SET position = ? WHERE id = ? AND quiz_id = ?');
+            foreach ($orderedIds as $idx => $qId) {
+                $posStmt->execute([$idx + 1, (int) $qId, $quizId]);
+            }
+
+            $pdo->prepare('UPDATE quizzes SET updated_at = ? WHERE id = ?')->execute([utc_now(), $quizId]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Moves a question one position up or down.
+     */
+    public static function moveQuestion(int $quizId, int $teacherId, int $quizQuestionId, string $direction): void
+    {
+        $quiz = self::find($quizId, $teacherId);
+        if (!$quiz || $quiz['status'] !== 'draft') {
+            throw new RuntimeException('Cannot reorder: quiz is frozen or not found.');
+        }
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('SELECT id, position FROM quiz_questions WHERE id = ? AND quiz_id = ?');
+            $stmt->execute([$quizQuestionId, $quizId]);
+            $cur = $stmt->fetch();
+            if (!$cur) {
+                $pdo->rollBack();
+                return;
+            }
+
+            $curPos = (int) $cur['position'];
+            if ($direction === 'up') {
+                $swapStmt = $pdo->prepare(
+                    'SELECT id, position FROM quiz_questions WHERE quiz_id = ? AND position < ? ORDER BY position DESC LIMIT 1'
+                );
+            } else {
+                $swapStmt = $pdo->prepare(
+                    'SELECT id, position FROM quiz_questions WHERE quiz_id = ? AND position > ? ORDER BY position ASC LIMIT 1'
+                );
+            }
+            $swapStmt->execute([$quizId, $curPos]);
+            $target = $swapStmt->fetch();
+            if (!$target) {
+                $pdo->rollBack();
+                return;
+            }
+
+            $targetId = (int) $target['id'];
+            $targetPos = (int) $target['position'];
+
+            // Swap using temporary position 0
+            $pdo->prepare('UPDATE quiz_questions SET position = 0 WHERE id = ?')->execute([$cur['id']]);
+            $pdo->prepare('UPDATE quiz_questions SET position = ? WHERE id = ?')->execute([$curPos, $targetId]);
+            $pdo->prepare('UPDATE quiz_questions SET position = ? WHERE id = ?')->execute([$targetPos, $cur['id']]);
+
+            $pdo->prepare('UPDATE quizzes SET updated_at = ? WHERE id = ?')->execute([utc_now(), $quizId]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Removes a question from a draft quiz and normalizes positions.
+     */
+    public static function removeQuestion(int $quizId, int $teacherId, int $quizQuestionId): void
+    {
+        $quiz = self::find($quizId, $teacherId);
+        if (!$quiz || $quiz['status'] !== 'draft') {
+            throw new RuntimeException('Cannot remove question: quiz is frozen or not found.');
+        }
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM quiz_question_options WHERE quiz_question_id = ?')->execute([$quizQuestionId]);
+            $pdo->prepare('DELETE FROM quiz_questions WHERE id = ? AND quiz_id = ?')->execute([$quizQuestionId, $quizId]);
+
+            $qStmt = $pdo->prepare('SELECT id FROM quiz_questions WHERE quiz_id = ? ORDER BY position ASC');
+            $qStmt->execute([$quizId]);
+            $remaining = $qStmt->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($remaining as $i => $qId) {
+                $pdo->prepare('UPDATE quiz_questions SET position = ? WHERE id = ?')->execute([-( ($i + 1) * 100 ), $qId]);
+            }
+            foreach ($remaining as $i => $qId) {
+                $pdo->prepare('UPDATE quiz_questions SET position = ? WHERE id = ?')->execute([$i + 1, $qId]);
+            }
+
+            $pdo->prepare('UPDATE quizzes SET updated_at = ? WHERE id = ?')->execute([utc_now(), $quizId]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Updates prompt, points, rubric and options for an individual question copy.
+     */
+    public static function updateQuestionCopy(int $quizId, int $teacherId, int $quizQuestionId, array $data): void
+    {
+        $quiz = self::find($quizId, $teacherId);
+        if (!$quiz || $quiz['status'] !== 'draft') {
+            throw new RuntimeException('Cannot edit question copy: quiz is frozen or not found.');
+        }
+
+        $prompt = trim((string) ($data['prompt'] ?? ''));
+        $points = max(0.0, round((float) ($data['points'] ?? 1.0), 2));
+        $rubric = !empty($data['rubric']) ? trim((string) $data['rubric']) : null;
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare(
+                'UPDATE quiz_questions SET prompt = ?, points = ?, rubric = ? WHERE id = ? AND quiz_id = ?'
+            );
+            $stmt->execute([$prompt, $points, $rubric, $quizQuestionId, $quizId]);
+
+            if (isset($data['options']) && is_array($data['options'])) {
+                $pdo->prepare('DELETE FROM quiz_question_options WHERE quiz_question_id = ?')->execute([$quizQuestionId]);
+                $insOpt = $pdo->prepare(
+                    'INSERT INTO quiz_question_options (quiz_question_id, label, is_correct, position) VALUES (?, ?, ?, ?)'
+                );
+                $pos = 1;
+                foreach ($data['options'] as $opt) {
+                    $label = trim((string) ($opt['label'] ?? ''));
+                    if ($label === '') {
+                        continue;
+                    }
+                    $isCorrect = !empty($opt['is_correct']) ? 1 : 0;
+                    $insOpt->execute([$quizQuestionId, $label, $isCorrect, $pos++]);
+                }
+            }
+
+            $pdo->prepare('UPDATE quizzes SET updated_at = ? WHERE id = ?')->execute([utc_now(), $quizId]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Publishes a quiz if there are zero blockers, freezing its contents.
+     */
+    public static function publish(int $quizId, int $teacherId): array
+    {
+        $quiz = self::find($quizId, $teacherId);
+        if (!$quiz) {
+            return ['success' => false, 'blockers' => ['Quiz not found or not owned.']];
+        }
+        if ($quiz['status'] !== 'draft') {
+            return ['success' => false, 'blockers' => ['Quiz is already published or archived.']];
+        }
+
+        $blockers = self::getBlockers($quizId, $teacherId);
+        if (!empty($blockers)) {
+            return ['success' => false, 'blockers' => $blockers];
+        }
+
+        $now = utc_now();
+        $stmt = db()->prepare(
+            'UPDATE quizzes SET status = "published", published_at = ?, updated_at = ? WHERE id = ? AND status = "draft"'
+        );
+        $stmt->execute([$now, $now, $quizId]);
+
+        return ['success' => true, 'blockers' => []];
+    }
+
+    /**
+     * Lists bank questions for this teacher, noting which ones are already added.
+     */
+    public static function getAvailableBankQuestions(int $teacherId, int $quizId, string $q = '', string $type = ''): array
+    {
+        $sql = 'SELECT q.*,
+                       (SELECT COUNT(*) FROM quiz_questions qq WHERE qq.quiz_id = ? AND qq.source_question_id = q.id) AS in_this_quiz
+                  FROM questions q
+                 WHERE q.teacher_id = ? AND q.archived_at IS NULL';
+        $params = [$quizId, $teacherId];
+
+        if ($q !== '') {
+            $sql .= ' AND q.prompt LIKE ?';
+            $params[] = '%' . $q . '%';
+        }
+        if ($type !== '' && in_array($type, ['single', 'true_false', 'multi', 'short', 'essay'], true)) {
+            $sql .= ' AND q.type = ?';
+            $params[] = $type;
+        }
+        $sql .= ' ORDER BY q.id DESC LIMIT 100';
+
+        $stmt = db()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
 }

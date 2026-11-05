@@ -4,3 +4,4 @@
 [03-Nov-2026 23:24:04 UTC] PDOException: SQLSTATE[HY000] [1044] Access denied for user 'quiver_app'@'localhost' to database 'quiver' in C:\quiver\app\core\db.php:19
 [03-Nov-2026 23:25:46 UTC] PDOException: SQLSTATE[HY000] [1044] Access denied for user 'quiver_app'@'localhost' to database 'quiver' in C:\quiver\app\core\db.php:19
 [03-Nov-2026 23:26:06 UTC] PDOException: SQLSTATE[HY000] [1044] Access denied for user 'quiver_app'@'localhost' to database 'quiver' in C:\quiver\app\core\db.php:19
+[05-Nov-2026 09:53:12 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19

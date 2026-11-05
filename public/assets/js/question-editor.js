@@ -131,6 +131,13 @@
     var list = document.getElementById('pv-opts');
     list.textContent = '';
     var items = [];
+    if (type === 'short' || type === 'essay') {
+      var box = document.createElement('li');
+      box.className = 'preview__answer' + (type === 'essay' ? ' preview__answer--tall' : '');
+      box.textContent = type === 'essay' ? 'Students write their answer here.' : 'Students type a short answer here.';
+      list.appendChild(box);
+      return;
+    }
     if (type === 'true_false') {
       items = ['True', 'False'];
     } else {

@@ -5,3 +5,6 @@
 [03-Nov-2026 23:25:46 UTC] PDOException: SQLSTATE[HY000] [1044] Access denied for user 'quiver_app'@'localhost' to database 'quiver' in C:\quiver\app\core\db.php:19
 [03-Nov-2026 23:26:06 UTC] PDOException: SQLSTATE[HY000] [1044] Access denied for user 'quiver_app'@'localhost' to database 'quiver' in C:\quiver\app\core\db.php:19
 [05-Nov-2026 09:53:12 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19
+[05-Nov-2026 10:26:16 UTC] TypeError: e(): Argument #1 ($value) must be of type ?string, int given, called in C:\quiver\public\teacher\quizzes.php on line 83 in C:\quiver\app\core\http.php:5
+[05-Nov-2026 10:26:57 UTC] TypeError: e(): Argument #1 ($value) must be of type ?string, int given, called in C:\quiver\public\teacher\quizzes.php on line 83 in C:\quiver\app\core\http.php:5
+[05-Nov-2026 10:29:20 UTC] TypeError: e(): Argument #1 ($value) must be of type ?string, int given, called in C:\quiver\public\teacher\quizzes.php on line 83 in C:\quiver\app\core\http.php:5

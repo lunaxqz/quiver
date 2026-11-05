@@ -1,0 +1,64 @@
+/* Quizzes list & Quiz Builder (Day 9 & 10) */
+
+/* ---- Quizzes List Page ---- */
+.quizzes-card { padding: var(--s5) var(--s5) var(--s4); }
+.quizzes-filters { display: grid; grid-template-columns: 1fr 220px 180px; gap: var(--s3); align-items: end; margin-bottom: var(--s4); }
+.quizzes-filters .field { margin: 0; }
+
+.tbl--quizzes td { padding: var(--s4) var(--s3) var(--s4) 0; vertical-align: top; }
+.tbl--quizzes th { padding-right: var(--s3); }
+
+.q-title-cell { max-width: 300px; }
+.q-title-cell a { display: block; font-weight: 500; text-decoration: none; color: var(--ink); }
+.q-title-cell a:hover { text-decoration: underline; }
+.q-meta { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+
+.q-actions-cell { white-space: nowrap; }
+.q-actions-cell .action-main { display: block; font-size: var(--t-sm); font-weight: 500; text-decoration: none; color: var(--ink); margin-bottom: 2px; }
+.q-actions-cell .action-main:hover { text-decoration: underline; }
+.q-actions-cell .action-sub { display: block; font-size: 11px; color: var(--ink-3); text-decoration: none; }
+.q-actions-cell .action-sub:hover { text-decoration: underline; color: var(--ink); }
+
+/* Dialog for + Create quiz */
+.modal-overlay { position: fixed; inset: 0; background: rgba(27, 26, 23, 0.4); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
+.modal-overlay[hidden], .modal-overlay.is-hidden { display: none !important; }
+.modal-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-surface); padding: var(--s5); width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; }
+.modal-card h2 { font-size: 20px; margin: 0 0 var(--s2); }
+.modal-card p { color: var(--ink-2); font-size: var(--t-sm); margin: 0 0 var(--s4); }
+.modal-actions { display: flex; justify-content: flex-end; gap: var(--s2); margin-top: var(--s4); }
+
+/* ---- Quiz Builder Page ---- */
+.builder-grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: var(--s5); align-items: start; }
+.builder-left { display: flex; flex-direction: column; gap: var(--s4); }
+.builder-right { display: flex; flex-direction: column; gap: var(--s4); }
+
+.section-group { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-surface); padding: var(--s4) var(--s5); }
+.section-title { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 var(--s3); display: flex; align-items: center; gap: var(--s2); }
+
+.schedule-row { display: grid; grid-template-columns: 1fr; gap: var(--s3); }
+.attempts-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+
+.check-label { display: flex; align-items: flex-start; gap: var(--s2); font-size: var(--t-sm); margin-bottom: var(--s2); cursor: pointer; user-select: none; }
+.check-label input[type="checkbox"] { margin-top: 3px; accent-color: var(--ink); width: 16px; height: 16px; }
+
+.builder-subtext { font-size: 11px; color: var(--ink-3); line-height: 1.4; margin-top: var(--s2); margin-bottom: 0; }
+
+/* Right Pane: Questions & Ready to publish */
+.questions-card { min-height: 360px; }
+.questions-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s4); }
+.questions-head h2 { font-size: 22px; margin: 0; }
+.questions-meta { font-size: var(--t-sm); color: var(--ink-3); margin-top: 2px; }
+
+.questions-empty { text-align: center; padding: var(--s6) var(--s4); color: var(--ink-3); border: 1.5px dashed var(--line); border-radius: var(--r-surface); margin: var(--s4) 0; }
+
+.publish-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-surface); padding: var(--s5); }
+.publish-panel__status { display: flex; align-items: flex-start; gap: var(--s3); margin-bottom: var(--s3); }
+.publish-panel__icon { font-size: 16px; color: var(--complete); line-height: 1.3; }
+.publish-panel__title { font-weight: 500; font-size: var(--t-base); margin: 0; }
+.publish-panel__desc { font-size: var(--t-sm); color: var(--ink-2); line-height: 1.4; margin: var(--s2) 0 0; }
+.publish-panel__footer { display: flex; align-items: center; justify-content: space-between; margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--line); font-size: var(--t-sm); color: var(--ink-3); }
+
+@media (max-width: 960px) {
+  .builder-grid { grid-template-columns: 1fr; }
+  .quizzes-filters { grid-template-columns: 1fr; }
+}

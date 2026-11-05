@@ -120,6 +120,48 @@ try {
     check('short answer with no accepted answer is rejected', isset(QuestionService::validate(array_merge($base, ['type' => 'short', 'prompt' => 'P', 'points' => '1']))['accepted']));
     check('a valid essay passes validation', QuestionService::validate(array_merge($base, ['type' => 'essay', 'prompt' => 'P', 'points' => '5'])) === []);
     check('points above 100 are rejected', isset(QuestionService::validate(array_merge($base, ['type' => 'essay', 'prompt' => 'P', 'points' => '101']))['points']));
+
+    // ---------------------------------------------------------------- quizzes (Day 9)
+    $quizA = QuizService::createDraft($teacherA['id'], $classA, 'Draft Quiz A');
+    check('teacher A can create a draft quiz in their class', $quizA > 0);
+    check('teacher A can open their own quiz', QuizService::find($quizA, $teacherA['id']) !== null);
+    check('teacher B cannot open teacher A\'s quiz', QuizService::find($quizA, $teacherB['id']) === null);
+
+    $threw = false;
+    try {
+        QuizService::createDraft($teacherB['id'], $classA, 'Hijack Quiz');
+    } catch (Throwable $e) {
+        $threw = true;
+    }
+    check('teacher B cannot create a quiz in teacher A\'s class', $threw);
+
+    $listB = QuizService::listForTeacher($teacherB['id']);
+    check('teacher B\'s quiz list does not include teacher A\'s quiz', count($listB['items']) === 0);
+
+    // Settings update & Timezone test: 08:00 Manila = 00:00 UTC
+    QuizService::saveSettings($quizA, $teacherA['id'], [
+        'title' => 'Updated Quiz A',
+        'class_id' => $classA,
+        'instructions' => 'Read carefully.',
+        'opens_at_manila' => '2026-11-09T08:00',
+        'closes_at_manila' => '2026-11-09T09:00',
+        'duration_min' => 50,
+        'max_attempts' => 2,
+        'score_policy' => 'latest',
+        'hold_score' => true,
+        'hold_review' => true,
+    ]);
+
+    $saved = QuizService::find($quizA, $teacherA['id']);
+    check('teacher A can update draft quiz settings', $saved['title'] === 'Updated Quiz A' && (int) $saved['duration_min'] === 50 && (int) $saved['max_attempts'] === 2 && $saved['score_policy'] === 'latest');
+    check('dates are stored in UTC: 08:00 Manila is stored as 00:00 UTC', $saved['opens_at'] === '2026-11-09 00:00:00');
+    check('window is displayed in Manila time matching Figma', $saved['window_formatted'] === 'Mon 09 Nov · 08:00–09:00');
+
+    // Archive and restore
+    QuizService::setArchived($quizA, $teacherA['id'], true);
+    check('archived quiz leaves active draft list', QuizService::countForTeacher($teacherA['id'], 'all') === 0 && QuizService::countForTeacher($teacherA['id'], 'archived') === 1);
+    QuizService::setArchived($quizA, $teacherA['id'], false);
+    check('restored quiz returns to active list', QuizService::countForTeacher($teacherA['id'], 'all') === 1);
 } finally {
     // Remove everything this file created, children before parents.
     $pdo = db();
@@ -128,13 +170,14 @@ try {
     foreach ($ids['users'] as $uid) {
         $pdo->exec("DELETE FROM login_attempts WHERE identifier = 'student:" . (int) $uid . "'");
     }
+    $cs = $pdo->query('SELECT id FROM classes WHERE teacher_id IN (' . $u . ')')->fetchAll(PDO::FETCH_COLUMN);
+    $c  = $in($cs);
+    $pdo->exec('DELETE FROM quizzes WHERE created_by IN (' . $u . ') OR class_id IN (' . $c . ')');
     $qs = $pdo->query('SELECT id FROM questions WHERE teacher_id IN (' . $u . ')')->fetchAll(PDO::FETCH_COLUMN);
     $q  = $in($qs);
     $pdo->exec('DELETE FROM question_options WHERE question_id IN (' . $q . ')');
     $pdo->exec('DELETE FROM question_tags WHERE question_id IN (' . $q . ')');
     $pdo->exec('DELETE FROM questions WHERE id IN (' . $q . ')');
-    $cs = $pdo->query('SELECT id FROM classes WHERE teacher_id IN (' . $u . ')')->fetchAll(PDO::FETCH_COLUMN);
-    $c  = $in($cs);
     $pdo->exec('DELETE FROM class_memberships WHERE class_id IN (' . $c . ') OR student_id IN (' . $u . ')');
     $pdo->exec('DELETE FROM classes WHERE id IN (' . $c . ')');
     $pdo->exec('DELETE FROM users WHERE id IN (' . $u . ')');

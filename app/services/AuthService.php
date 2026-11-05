@@ -82,6 +82,33 @@ final class AuthService
         return (int) db()->lastInsertId();
     }
 
+    /** A strong random password from an alphabet without look-alike characters (no 0/O, 1/l/I). */
+    public static function randomPassword(int $length = 16): string
+    {
+        $alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $out = '';
+        for ($i = 0; $i < $length; $i++) {
+            $out .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+        return $out;
+    }
+
+    /** Is this the right password for this account? (Used before allowing a password change.) */
+    public static function verifyPassword(int $userId, string $password): bool
+    {
+        $stmt = db()->prepare('SELECT password_hash FROM users WHERE id = ?');
+        $stmt->execute([$userId]);
+        $hash = $stmt->fetchColumn();
+        return is_string($hash) && password_verify($password, $hash);
+    }
+
+    /** Sets a new password the person chose themselves, and ends any "must change" requirement. */
+    public static function changePassword(int $userId, string $newPassword): void
+    {
+        db()->prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?')
+            ->execute([password_hash($newPassword, PASSWORD_DEFAULT), $userId]);
+    }
+
     private static function dummyHash(): string
     {
         static $hash = null;

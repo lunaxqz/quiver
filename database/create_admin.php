@@ -27,12 +27,7 @@ if (!preg_match('/^[A-Za-z0-9._-]{3,30}$/', $username)) {
     exit(1);
 }
 
-// 16 characters from an alphabet without look-alike letters.
-$alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-$password = '';
-for ($i = 0; $i < 16; $i++) {
-    $password .= $alphabet[random_int(0, strlen($alphabet) - 1)];
-}
+$password = AuthService::randomPassword();
 
 try {
     AuthService::createUser($username, $fullName, $password, 'admin');

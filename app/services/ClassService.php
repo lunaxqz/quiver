@@ -136,6 +136,12 @@ final class ClassService
         )->fetchAll();
     }
 
+    /** Compatibility helper for Day 5 admin view. */
+    public static function adminList(string $q = '', int $limit = 10): array
+    {
+        return self::listAll();
+    }
+
     /** Old code stops working immediately. Students already enrolled keep access. */
     public static function regenerateCode(int $classId): void
     {
@@ -202,7 +208,7 @@ final class ClassService
         return [$where, $args];
     }
 
-    /** Returns 'added', 'already', 'closed', or 'not_found' (also used for non-students, so no one learns who is a teacher). */
+    /** Returns 'added', 'already', 'closed', or 'not_found'. */
     public static function addByUsername(int $classId, string $username): string
     {
         $class = db()->prepare('SELECT archived_at FROM classes WHERE id = ?');

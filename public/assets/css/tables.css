@@ -1,0 +1,37 @@
+/* Panels, tables, filters and pagination. Reused by every list screen. */
+
+.page-desc { color:var(--ink-2); margin:calc(-1 * var(--s2)) 0 var(--s5); max-width:70ch; }
+
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-surface); padding:var(--s5); margin-bottom:var(--s5); }
+.panel h2 { font-size:var(--t-lg); margin-bottom:var(--s4); }
+.panel__note { color:var(--ink-3); font-size:var(--t-sm); margin:var(--s3) 0 0; }
+
+.select { height:40px; padding:0 var(--s3); font:inherit; color:var(--ink); background:var(--surface); border:1px solid #DAD7CF; border-radius:var(--r-control); }
+.filters { display:flex; flex-wrap:wrap; gap:var(--s2); margin-bottom:var(--s4); }
+.filters .input { height:40px; flex:1 1 180px; width:auto; border-radius:var(--r-control); }
+
+.table-wrap { overflow-x:auto; }
+.table { width:100%; border-collapse:collapse; font-size:var(--t-sm); }
+.table th { text-align:left; font-weight:500; color:var(--ink-3); padding:var(--s2) var(--s3); border-bottom:1px solid var(--line); white-space:nowrap; }
+.table td { padding:var(--s3); border-bottom:1px solid var(--line); vertical-align:middle; min-height:40px; }
+.table tr:last-child td { border-bottom:0; }
+.table__sub { display:block; color:var(--ink-3); font-size:12px; }
+.table__actions { white-space:nowrap; text-align:right; }
+.table__actions .inline-form { margin-left:var(--s2); }
+
+.btn--sm { padding:4px 10px; font-size:12px; }
+
+.pager { display:flex; align-items:center; justify-content:space-between; margin-top:var(--s4); font-size:var(--t-sm); color:var(--ink-2); }
+.pager__links { display:flex; gap:var(--s2); }
+
+/* One-time secret (temporary password) */
+.secret { display:block; margin:var(--s2) 0; padding:var(--s3) var(--s4); background:var(--paper); border:1px dashed var(--ink-3);
+          border-radius:var(--r-control); font:600 18px/1.4 ui-monospace, Consolas, monospace; letter-spacing:.04em; user-select:all; }
+
+/* Administrator page: directories on the left, forms on the right (Figma: 702 + 370) */
+.admin-grid { display:grid; grid-template-columns:minmax(0, 1fr) 370px; gap:var(--s5); align-items:start; }
+@media (max-width: 1100px) { .admin-grid { grid-template-columns:1fr; } }
+
+/* Keep names and dates readable in narrow tables */
+.table td:first-child { min-width:150px; }
+.table td:nth-child(4) { white-space:nowrap; }

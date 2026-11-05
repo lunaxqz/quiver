@@ -27,14 +27,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if ($action === 'login') {
         $login['username'] = post_str('username');
         $password = post_raw('password');
+        $ip = client_ip();
         if ($login['username'] === '' || $password === '') {
             $login['error'] = 'Enter your username and your password.';
+        } elseif (RateLimiter::isBlocked('login', $login['username'], $ip)) {
+            // Too many recent mistakes: do not even check the password, and do not count this attempt.
+            http_response_code(429);
+            $login['error'] = 'Too many sign-in attempts. Please wait up to 15 minutes and try again. If you still cannot sign in, ask your teacher or administrator for a temporary password.';
         } else {
             $found = AuthService::attempt($login['username'], $password);
             if ($found !== null) {
+                RateLimiter::recordSuccess('login', $login['username'], $ip);
                 login_user($found);
                 redirect(home_path($found['role']));
             }
+            RateLimiter::recordFailure('login', $login['username'], $ip);
             // One message for "no such user" and "wrong password", so nobody can guess which usernames exist.
             $login['error'] = 'That username and password do not match.';
         }

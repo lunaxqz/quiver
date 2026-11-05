@@ -23,7 +23,8 @@ function _page_head(string $title, array $extraCss = [], string $bodyClass = '')
        . '<title>' . $t . ' · QUIVER</title>'
        . '<link rel="stylesheet" href="/assets/css/tokens.css">'
        . '<link rel="stylesheet" href="/assets/css/layout.css">'
-       . '<link rel="stylesheet" href="/assets/css/forms.css">';
+       . '<link rel="stylesheet" href="/assets/css/forms.css">'
+       . '<link rel="stylesheet" href="/assets/css/tables.css">';
     foreach ($extraCss as $css) {
         echo '<link rel="stylesheet" href="' . htmlspecialchars($css, ENT_QUOTES, 'UTF-8') . '">';
     }
@@ -40,6 +41,17 @@ function _signout_form(): string
          . '<button class="linklike" type="submit">Sign out</button></form>';
 }
 
+/** A one-time message left by the previous page (e.g. "Password changed."). Printed once, then forgotten. */
+function _flash_html(): string
+{
+    $f = function_exists('flash_get') ? flash_get() : null;
+    if ($f === null) {
+        return '';
+    }
+    $cls = ($f['type'] ?? '') === 'error' ? 'alert--error' : 'alert--notice';
+    return '<div class="alert ' . $cls . '" role="status">' . htmlspecialchars((string) $f['message'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</div>';
+}
+
 function _who(): array
 {
     $u = function_exists('current_user') ? current_user() : null;
@@ -50,7 +62,15 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
 {
     _page_head($title, $extraCss);
     $links = $role === 'admin'
-        ? ['accounts' => ['Accounts', '/admin/index.php'], 'classes' => ['Classes', '/admin/classes.php']]
+      
+function teacher_start(string $title, string $active = '', string $role = 'teacher', array $extraCss = []): void
+{
+    _page_head($title, $extraCss);
+    $links = $role === 'admin'
+        ? [
+            'accounts' => ['Accounts', '/admin/index.php'],
+            'classes'  => ['Classes',  '/admin/classes.php'],
+        ]
         : [
             'overview' => ['Overview',      '/teacher/index.php'],
             'classes'  => ['Classes',       '/teacher/classes.php'],
@@ -67,7 +87,8 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
         echo '<a href="' . $href . '"' . $cur . '>' . $label . '</a>';
     }
     echo '</nav><div class="t-user"><strong>' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong><br>'
-       . $roleLabel . ($roleLabel !== '' ? ' · ' : '') . _signout_form() . '</div></aside>'
+       . $roleLabel . ($roleLabel !== '' ? ' · ' : '') . _signout_form()
+       . '<br><a href="/change_password.php">Change password</a></div></aside>'
        . '<main class="t-main"><div class="t-content">'
        . '<div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>';
 }
@@ -82,8 +103,9 @@ function student_start(string $title): void
     _page_head($title);
     $who = _who();
     echo '<header class="s-header"><a class="s-brand" href="/">QUIVER</a>'
-       . '<span class="s-who">' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ' · ' . _signout_form() . '</span></header>'
-       . '<main class="s-main"><div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>';
+       . '<span class="s-who">' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ' · <a href="/change_password.php">Change password</a> · ' . _signout_form() . '</span></header>'
+       . '<main class="s-main"><div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>'
+       . _flash_html();
 }
 
 function student_end(): void

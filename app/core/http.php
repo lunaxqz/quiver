@@ -37,6 +37,15 @@ function post_raw(string $key): string
     return is_string($v) ? $v : '';
 }
 
+/**
+ * The visitor's address as seen by the server. We deliberately do NOT trust headers like
+ * X-Forwarded-For, because anyone can fake them.
+ */
+function client_ip(): string
+{
+    return substr((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'), 0, 45);
+}
+
 /** Security headers from guide section 7. Cheap, and they block most XSS even if one slips through. */
 function send_security_headers(): void
 {

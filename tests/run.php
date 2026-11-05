@@ -39,6 +39,9 @@ function check(string $name, bool $ok): void
 echo "Authorization checks\n";
 require __DIR__ . '/authz.php';
 
+echo "\nStarting attempts and answer leakage (Day 11)\n";
+require __DIR__ . '/attempts.php';
+
 $failed = count($GLOBALS['quiver_fail']);
 echo "\n" . $GLOBALS['quiver_pass'] . ' passed, ' . $failed . " failed.\n";
 

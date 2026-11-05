@@ -98,10 +98,24 @@ function teacher_end(): void
     echo '</div></main></div></body></html>';
 }
 
-function student_start(string $title): void
+/**
+ * Student frame. $context is shown after the name in the header (e.g. "IT301, Section B").
+ * $ownHead = true skips the standard title bar so a page can draw its own (the Figma quiz screens do).
+ */
+function student_start(string $title, string $context = '', bool $ownHead = false, array $extraCss = []): void
 {
-    _page_head($title);
+    _page_head($title, $extraCss);
     $who = _who();
+    if ($context !== '') {
+        $who['full_name'] = $who['full_name'] . ' · ' . $context;
+    }
+    if ($ownHead) {
+        echo '<header class="s-header"><a class="s-brand" href="/">QUIVER</a>'
+           . '<span class="s-who">' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+           . ' · <a href="/change_password.php">Change password</a> · ' . _signout_form() . '</span></header>'
+           . '<main class="s-main">' . _flash_html();
+        return;
+    }
     echo '<header class="s-header"><a class="s-brand" href="/">QUIVER</a>'
        . '<span class="s-who">' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ' · <a href="/change_password.php">Change password</a> · ' . _signout_form() . '</span></header>'
        . '<main class="s-main"><div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>'

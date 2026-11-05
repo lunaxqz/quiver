@@ -47,3 +47,6 @@ body.auth { background:#F2F0EA; min-height:100vh; display:flex; flex-direction:c
 @media (max-width: 480px) {
   .row2 { grid-template-columns:1fr; }
 }
+
+.auth-narrow { max-width:520px; margin:0 auto; }
+.auth-narrow h1 { font-size:30px; }

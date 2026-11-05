@@ -110,7 +110,7 @@ teacher_start(
           <td><?= $n ?> quiz<?= $n === 1 ? '' : 'zes' ?></td>
           <td class="row-actions">
             <a href="/teacher/question.php?id=<?= (int) $r['id'] ?>">Edit</a>
-            <form class="inline-form" method="post" action="/teacher/bank.php"<?= $archived ? '' : ' data-confirm="Archive this question? Quizzes that already use it are not changed."' ?>>
+            <form class="inline-form" method="post" action="/teacher/bank.php"<?= $archived ? '' : ' data-confirm="' . e($n > 0 ? 'This question is used in ' . $n . ' quiz' . ($n === 1 ? '' : 'zes') . '. Archiving hides it from the bank only. Those quizzes keep their own copies. Archive it?' : 'Archive this question? You can restore it later.') . '"' ?>>
               <?= csrf_field() ?>
               <input type="hidden" name="action" value="<?= $archived ? 'restore' : 'archive' ?>">
               <input type="hidden" name="question_id" value="<?= (int) $r['id'] ?>">

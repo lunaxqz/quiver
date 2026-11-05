@@ -61,7 +61,11 @@
 /* Show only the controls that belong to the chosen type. */
 #editor[data-type='single'] .only-multi, #editor[data-type='multi'] .only-single { display:none; }
 #editor:not([data-type='true_false']) .only-tf { display:none; }
-#editor[data-type='true_false'] .only-choice { display:none; }
+#editor[data-type='true_false'] .only-choice, #editor[data-type='short'] .only-choice, #editor[data-type='essay'] .only-choice { display:none; }
+#editor:not([data-type='short']) .only-short { display:none; }
+#editor:not([data-type='essay']) .only-essay { display:none; }
+.preview__answer { color:var(--ink-3); border-style:dashed !important; }
+.preview__answer--tall { min-height:110px; align-items:flex-start !important; }
 
 .preview__prompt { font-size:var(--t-xl); line-height:1.3; margin:var(--s3) 0 var(--s5); white-space:pre-wrap; overflow-wrap:anywhere; }
 .preview__opts { list-style:none; margin:0 0 var(--s4); padding:0; display:flex; flex-direction:column; gap:var(--s3); }

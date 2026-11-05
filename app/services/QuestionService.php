@@ -15,9 +15,10 @@ final class QuestionService
         'short'      => 'Short answer',
         'essay'      => 'Essay',
     ];
-    /** Types the editor can write so far (short answer and essay arrive on Day 8). */
-    public const EDITABLE = ['single', 'true_false', 'multi'];
+    /** Every type the editor can write. */
+    public const EDITABLE = ['single', 'true_false', 'multi', 'short', 'essay'];
     public const MAX_OPTIONS = 6;
+    public const MAX_ACCEPTED = 10;
     public const PER_PAGE = 10;
 
     // ------------------------------------------------------------ list
@@ -145,6 +146,22 @@ final class QuestionService
             if (!in_array($d['tf'], ['true', 'false'], true)) {
                 $err['tf'] = 'Choose whether the statement is true or false.';
             }
+        } elseif ($d['type'] === 'short') {
+            $acc = $d['accepted'] ?? [];
+            if (!$acc) {
+                $err['accepted'] = 'Add at least one accepted answer.';
+            } elseif (count($acc) > self::MAX_ACCEPTED) {
+                $err['accepted'] = 'Use at most ' . self::MAX_ACCEPTED . ' accepted answers.';
+            }
+            foreach ($acc as $a) {
+                if (mb_strlen($a) > 200) {
+                    $err['accepted'] = 'Keep each accepted answer under 200 characters.';
+                }
+            }
+        } elseif ($d['type'] === 'essay') {
+            if (mb_strlen((string) ($d['rubric'] ?? '')) > 5000) {
+                $err['rubric'] = 'Keep the marking rubric under 5,000 characters.';
+            }
         } else {
             $filled = array_filter($d['options'], static fn($o) => $o['label'] !== '');
             $correct = array_filter($filled, static fn($o) => $o['correct']);
@@ -180,16 +197,17 @@ final class QuestionService
     public static function save(int $teacherId, ?int $id, array $d): int
     {
         $pdo = db();
+        $rubric = $d['type'] === 'essay' && trim((string) ($d['rubric'] ?? '')) !== '' ? trim((string) $d['rubric']) : null;
         $pdo->beginTransaction();
         try {
             $now = utc_now();
             if ($id === null) {
-                $pdo->prepare('INSERT INTO questions (teacher_id, type, prompt, points, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-                    ->execute([$teacherId, $d['type'], $d['prompt'], $d['points'], $now, $now]);
+                $pdo->prepare('INSERT INTO questions (teacher_id, type, prompt, points, rubric, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                    ->execute([$teacherId, $d['type'], $d['prompt'], $d['points'], $rubric, $now, $now]);
                 $id = (int) $pdo->lastInsertId();
             } else {
-                $u = $pdo->prepare('UPDATE questions SET prompt = ?, points = ?, updated_at = ? WHERE id = ? AND teacher_id = ?');
-                $u->execute([$d['prompt'], $d['points'], $now, $id, $teacherId]);
+                $u = $pdo->prepare('UPDATE questions SET prompt = ?, points = ?, rubric = ?, updated_at = ? WHERE id = ? AND teacher_id = ?');
+                $u->execute([$d['prompt'], $d['points'], $rubric, $now, $id, $teacherId]);
                 if ($u->rowCount() === 0 && self::find($id, $teacherId) === null) {
                     throw new RuntimeException('Not your question.');
                 }
@@ -199,6 +217,11 @@ final class QuestionService
 
             if ($d['type'] === 'true_false') {
                 $opts = [['label' => 'True', 'correct' => $d['tf'] === 'true'], ['label' => 'False', 'correct' => $d['tf'] === 'false']];
+            } elseif ($d['type'] === 'short') {
+                // Accepted answers are stored as options that are all "correct".
+                $opts = array_map(static fn($a) => ['label' => $a, 'correct' => true], $d['accepted']);
+            } elseif ($d['type'] === 'essay') {
+                $opts = [];
             } else {
                 $opts = array_values(array_filter($d['options'], static fn($o) => $o['label'] !== ''));
             }

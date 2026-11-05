@@ -24,6 +24,8 @@ $form = [
     'points'  => $existing ? rtrim(rtrim(number_format((float) $existing['points'], 2, '.', ''), '0'), '.') : '1',
     'options' => array_fill(0, QuestionService::MAX_OPTIONS, ['label' => '', 'correct' => false]),
     'tf'      => '',
+    'accepted' => [],
+    'rubric'  => $existing['rubric'] ?? '',
     'tags'    => $existing['tags'] ?? [],
 ];
 if ($existing) {
@@ -31,7 +33,9 @@ if ($existing) {
         foreach ($existing['options'] as $o) {
             if ((int) $o['is_correct'] === 1) { $form['tf'] = strtolower($o['label']) === 'true' ? 'true' : 'false'; }
         }
-    } else {
+    } elseif ($existing['type'] === 'short') {
+        $form['accepted'] = array_map(static fn($o) => $o['label'], $existing['options']);
+    } elseif ($existing['type'] !== 'essay') {
         foreach (array_slice($existing['options'], 0, QuestionService::MAX_OPTIONS) as $i => $o) {
             $form['options'][$i] = ['label' => $o['label'], 'correct' => (int) $o['is_correct'] === 1];
         }
@@ -46,6 +50,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $form['prompt'] = post_str('prompt');
     $form['points'] = post_str('points');
     $form['tf']     = post_str('tf');
+    $form['rubric'] = post_str('rubric');
+    $acc = [];
+    foreach (preg_split('/\R/u', post_str('accepted')) ?: [] as $line) {
+        $line = trim(preg_replace('/\s+/u', ' ', $line) ?? '');
+        if ($line !== '' && !isset($acc[mb_strtolower($line)])) {
+            $acc[mb_strtolower($line)] = $line;
+        }
+    }
+    $form['accepted'] = array_values($acc);
     $form['tags']   = QuestionService::parseTags(post_str('tags'));
 
     $labels  = $_POST['option'] ?? [];
@@ -64,6 +77,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $savedId = QuestionService::save($teacherId, $existing ? (int) $existing['id'] : null, [
             'type' => $form['type'], 'prompt' => $form['prompt'], 'points' => number_format((float) $form['points'], 2, '.', ''),
             'options' => $form['options'], 'tf' => $form['tf'], 'tags' => $form['tags'],
+            'accepted' => $form['accepted'], 'rubric' => $form['rubric'],
         ]);
         flash_set($existing ? 'Question saved.' : 'Question created.');
         redirect('/teacher/question.php?id=' . $savedId);
@@ -95,8 +109,17 @@ foreach ($form['options'] as $i => $o) {
 }
 $rowCount = max($existing ? 2 : 4, $last + 1);
 $letters  = 'ABCDEF';
-$hint     = ['single' => 'One correct option.', 'multi' => 'One or more correct options.', 'true_false' => 'Two fixed options: True and False.'];
+$hint     = [
+    'single' => 'One correct option.', 'multi' => 'One or more correct options.', 'true_false' => 'Two fixed options: True and False.',
+    'short' => 'Marked automatically against your accepted answers.', 'essay' => 'Marked by you, using the rubric.',
+];
 ?>
+<?php if ($used > 0): ?>
+  <div class="alert alert--notice" role="status">
+    <strong>Used in <?= $used ?> quiz<?= $used === 1 ? '' : 'zes' ?>.</strong>
+    Saving changes this bank question only. Quizzes keep their own copies, so existing quizzes and grades do not change.
+  </div>
+<?php endif; ?>
 <?= error_summary($errors) ?>
 
 <form method="post" action="/teacher/question.php" id="editor" data-type="<?= e($form['type']) ?>" novalidate>
@@ -153,6 +176,22 @@ $hint     = ['single' => 'One correct option.', 'multi' => 'One or more correct 
         <label class="check"><input type="radio" name="tf" value="true"<?= $form['tf'] === 'true' ? ' checked' : '' ?>><span>True</span></label>
         <label class="check"><input type="radio" name="tf" value="false"<?= $form['tf'] === 'false' ? ' checked' : '' ?>><span>False</span></label>
         <?php if (isset($errors['tf'])): ?><p class="field__error" id="tf"><?= e($errors['tf']) ?></p><?php endif; ?>
+      </div>
+
+      <!-- short answer -->
+      <div class="field only-short">
+        <label class="eyebrow" for="accepted">Accepted answers · one per line</label>
+        <textarea class="input input--area" id="accepted" name="accepted" rows="4" placeholder="e.g. Domain Name System"<?= isset($errors['accepted']) ? ' aria-invalid="true"' : '' ?>><?= e(implode("\n", $form['accepted'])) ?></textarea>
+        <?php if (isset($errors['accepted'])): ?><p class="field__error" id="accepted-error"><?= e($errors['accepted']) ?></p><?php endif; ?>
+        <p class="field__hint">Capital letters and extra spaces are ignored when a student's answer is checked.</p>
+      </div>
+
+      <!-- essay -->
+      <div class="field only-essay">
+        <label class="eyebrow" for="rubric">Marking rubric · what a full-credit answer includes</label>
+        <textarea class="input input--area" id="rubric" name="rubric" rows="5" maxlength="5000"<?= isset($errors['rubric']) ? ' aria-invalid="true"' : '' ?>><?= e($form['rubric']) ?></textarea>
+        <?php if (isset($errors['rubric'])): ?><p class="field__error" id="rubric-error"><?= e($errors['rubric']) ?></p><?php endif; ?>
+        <p class="field__hint">Only you see the rubric. Essays are marked by hand on the grading screen.</p>
       </div>
 
       <div class="field">

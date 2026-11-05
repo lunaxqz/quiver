@@ -20,6 +20,11 @@ require_once __DIR__ . '/core/errors.php';
 require_once __DIR__ . '/core/auth.php';
 require_once __DIR__ . '/helpers/forms.php';
 
+// Scoring and other business rules: plain functions, one file each.
+foreach (glob(__DIR__ . '/rules/*.php') ?: [] as $ruleFile) {
+    require_once $ruleFile;
+}
+
 // Services (AuthService and friends) load themselves the first time they are used.
 spl_autoload_register(function (string $class): void {
     $file = __DIR__ . '/services/' . $class . '.php';

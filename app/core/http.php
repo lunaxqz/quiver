@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /** Escape text before printing it into a page. Use e() on EVERY value that came from a person or the database. */
-function e(?string $value): string
+function e(string|int|float|null $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }

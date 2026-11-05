@@ -23,8 +23,7 @@ function _page_head(string $title, array $extraCss = [], string $bodyClass = '')
        . '<title>' . $t . ' · QUIVER</title>'
        . '<link rel="stylesheet" href="/assets/css/tokens.css">'
        . '<link rel="stylesheet" href="/assets/css/layout.css">'
-       . '<link rel="stylesheet" href="/assets/css/forms.css">'
-       . '<link rel="stylesheet" href="/assets/css/tables.css">';
+       . '<link rel="stylesheet" href="/assets/css/forms.css">';
     foreach ($extraCss as $css) {
         echo '<link rel="stylesheet" href="' . htmlspecialchars($css, ENT_QUOTES, 'UTF-8') . '">';
     }
@@ -62,11 +61,6 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
 {
     _page_head($title, $extraCss);
     $links = $role === 'admin'
-      
-function teacher_start(string $title, string $active = '', string $role = 'teacher', array $extraCss = []): void
-{
-    _page_head($title, $extraCss);
-    $links = $role === 'admin'
         ? [
             'accounts' => ['Accounts', '/admin/index.php'],
             'classes'  => ['Classes',  '/admin/classes.php'],
@@ -90,7 +84,8 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
        . $roleLabel . ($roleLabel !== '' ? ' · ' : '') . _signout_form()
        . '<br><a href="/change_password.php">Change password</a></div></aside>'
        . '<main class="t-main"><div class="t-content">'
-       . '<div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>';
+       . '<div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>'
+       . _flash_html();
 }
 
 function teacher_end(): void

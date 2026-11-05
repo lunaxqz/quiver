@@ -57,7 +57,11 @@ function _who(): array
     return $u ?? ['full_name' => 'Not signed in', 'role' => ''];
 }
 
-function teacher_start(string $title, string $active = '', string $role = 'teacher', array $extraCss = []): void
+/**
+ * $subtitle and $action are trusted HTML written by our own pages (escape any person's text first).
+ * With either one, the title area matches the Figma headers: no rule underneath, button at the right.
+ */
+function teacher_start(string $title, string $active = '', string $role = 'teacher', array $extraCss = [], string $subtitle = '', string $action = ''): void
 {
     _page_head($title, $extraCss);
     $links = $role === 'admin'
@@ -84,7 +88,8 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
        . $roleLabel . ($roleLabel !== '' ? ' · ' : '') . _signout_form()
        . '<br><a href="/change_password.php">Change password</a></div></aside>'
        . '<main class="t-main"><div class="t-content">'
-       . '<div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>'
+       . '<div class="page-head' . ($subtitle !== '' || $action !== '' ? ' page-head--clean' : '') . '"><div><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1>'
+       . ($subtitle !== '' ? '<p class="page-head__sub">' . $subtitle . '</p>' : '') . '</div>' . $action . '</div>'
        . _flash_html();
 }
 

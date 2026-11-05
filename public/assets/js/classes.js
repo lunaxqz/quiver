@@ -7,6 +7,9 @@ document.addEventListener('click', function (ev) {
     if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done); }
   }
 });
+document.addEventListener('change', function (ev) {
+  if (ev.target.matches('[data-autosubmit]')) { ev.target.form.submit(); }
+});
 document.addEventListener('submit', function (ev) {
   var msg = ev.target.getAttribute('data-confirm');
   if (msg && !window.confirm(msg)) { ev.preventDefault(); }

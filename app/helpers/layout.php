@@ -46,11 +46,11 @@ function _who(): array
     return $u ?? ['full_name' => 'Not signed in', 'role' => ''];
 }
 
-function teacher_start(string $title, string $active = '', string $role = 'teacher'): void
+function teacher_start(string $title, string $active = '', string $role = 'teacher', array $extraCss = []): void
 {
-    _page_head($title);
+    _page_head($title, $extraCss);
     $links = $role === 'admin'
-        ? ['accounts' => ['Accounts', '/admin/index.php']]
+        ? ['accounts' => ['Accounts', '/admin/index.php'], 'classes' => ['Classes', '/admin/classes.php']]
         : [
             'overview' => ['Overview',      '/teacher/index.php'],
             'classes'  => ['Classes',       '/teacher/classes.php'],

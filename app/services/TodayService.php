@@ -150,7 +150,7 @@ final class TodayService
                 'roster_count'       => $gridData['roster_count'],
                 'cells'              => $gridData['cells'],
                 'action_label'       => 'Open live view',
-                'action_href'        => '/teacher/quiz.php?id=' . $quizId . '&view=live',
+                'action_href'        => '/teacher/live.php?quiz_id=' . $quizId,
             ];
         }
 
@@ -217,7 +217,7 @@ final class TodayService
                 'title'        => (string) $r['quiz_title'],
                 'detail'       => $detail,
                 'action_label' => 'Open live view',
-                'action_href'  => '/teacher/quiz.php?id=' . $quizId . '&view=live',
+                'action_href'  => '/teacher/live.php?quiz_id=' . $quizId,
             ];
         }
 
@@ -612,7 +612,7 @@ final class TodayService
                 $statusState = 'active';
                 $statusLabel = 'Open';
                 $windowLabel = 'Closes ' . to_manila((string) $r['closes_at'], 'H:i');
-                $href        = '/teacher/quiz.php?id=' . $quizId . '&view=live';
+                $href        = '/teacher/live.php?quiz_id=' . $quizId;
             } elseif ($phase === 'scheduled') {
                 $statusState = 'scheduled';
                 $statusLabel = 'Scheduled';

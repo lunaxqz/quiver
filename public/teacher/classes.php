@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../app/helpers/layout.php';
 
 $user      = require_role('teacher');
 $teacherId = (int) $user['id'];
+AttemptService::finalizeOverdue(null, $teacherId);
 $self      = '/teacher/classes.php';
 
 /** Build a link back to this page keeping the current class, search and page. */

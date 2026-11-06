@@ -360,10 +360,374 @@
   border-color: var(--ink-3);
 }
 
+.att-nav [hidden] {
+  display: none !important;
+}
+
 .att-foot {
   margin-top: var(--s4);
   font-size: 12px;
   color: var(--ink-3);
+}
+
+/* ==========================================================================
+   Day 14: Review your attempt screen (Figma: Student review and submit)
+   ========================================================================== */
+
+.rev-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+  font-size: var(--t-sm);
+}
+
+.rev-strip__counts {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  flex-wrap: wrap;
+}
+
+.rev-strip__timer {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.rev-card__title {
+  font-family: var(--font-read);
+  font-weight: 500;
+  font-size: 20px;
+  margin: 0 0 var(--s2);
+  color: var(--ink);
+}
+
+.rev-card__sub {
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+  margin: 0 0 var(--s4);
+}
+
+.rev-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--s6);
+}
+
+.rev-col {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+
+.rev-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--s2) 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  font: inherit;
+  font-size: var(--t-sm);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.rev-row:hover .rev-row__label {
+  text-decoration: underline;
+}
+
+.rev-row__label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rev-saved {
+  margin-top: var(--s4);
+}
+
+/* ---- Confirm submission panel ---- */
+.rev-confirm {
+  margin-top: var(--s5);
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r-surface);
+  padding: var(--s5) 28px;
+}
+
+.rev-confirm__eyebrow {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--s2);
+}
+
+.rev-confirm__title {
+  font-family: var(--font-read);
+  font-weight: 500;
+  font-size: 20px;
+  margin: 0 0 var(--s2);
+  color: var(--ink);
+}
+
+.rev-confirm__body {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  margin: 0 0 var(--s4);
+  line-height: 1.5;
+}
+
+.rev-confirm__check {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--t-sm);
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: var(--s4);
+}
+
+.rev-confirm__check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rev-confirm__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.rev-return-btn {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.rev-return-btn:hover {
+  border-color: var(--ink-3);
+}
+
+.rev-submit-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Day 14 & Day 16: Submission receipt & released result (Figma)
+   ========================================================================== */
+
+.rcpt-card {
+  padding: var(--s5) 28px;
+}
+
+.rcpt-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+  font-size: var(--t-sm);
+}
+
+.rcpt-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.rcpt-title {
+  font-family: var(--font-read);
+  font-weight: 500;
+  font-size: 22px;
+  margin: 0 0 var(--s4);
+  color: var(--ink);
+}
+
+.rcpt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s5);
+  padding-bottom: var(--s4);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--s4);
+}
+
+.rcpt-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--s1);
+}
+
+.rcpt-value {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rcpt-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.rcpt-note {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  line-height: 1.5;
+  margin: 0 0 var(--s4);
+}
+
+.rcpt-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.rcpt-back {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.rcpt-back:hover {
+  border-color: var(--ink-3);
+}
+
+.rcpt-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin: var(--s5) 0 var(--s3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.rcpt-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.rcpt-released-at {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.rcpt-score-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--s5);
+  align-items: center;
+  padding-bottom: var(--s4);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--s4);
+}
+
+.rcpt-score-num {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--ink);
+  margin-bottom: var(--s1);
+  font-variant-numeric: tabular-nums;
+}
+
+.rcpt-score-slash {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.rcpt-quiz-name {
+  font-family: var(--font-read);
+  font-weight: 500;
+  font-size: 20px;
+  margin: 0 0 var(--s1);
+  color: var(--ink);
+}
+
+.rcpt-review-badge {
+  margin-top: var(--s3);
+  font-size: var(--t-sm);
+}
+
+.rcpt-btn-disabled {
+  border-color: transparent;
+  background: rgba(27,26,23,.08);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.rcpt-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  margin-top: var(--s3);
+}
+
+.rcpt-review-item {
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--line);
+  font-size: var(--t-sm);
+}
+
+.rcpt-review-item__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--s1);
+}
+
+.rcpt-review-item__prompt {
+  font-family: var(--font-read);
+  font-size: var(--t-base);
+  color: var(--ink);
+  margin: 0 0 var(--s2);
+}
+
+.rcpt-review-item__ans,
+.rcpt-review-item__key,
+.rcpt-review-item__fb {
+  margin: 0 0 4px;
+  color: var(--ink-2);
+}
+
+.rcpt-label-inline {
+  font-weight: 600;
+  color: var(--ink);
 }
 
 @media (max-width: 640px) {
@@ -374,10 +738,21 @@
   .att-timer {
     text-align: left;
   }
-  .att-card {
+  .att-card,
+  .rev-confirm,
+  .rcpt-card {
     padding: var(--s4);
   }
-  .att-nav {
+  .att-nav,
+  .rev-strip,
+  .rev-confirm__actions,
+  .rcpt-foot {
     flex-wrap: wrap;
+  }
+  .rev-grid,
+  .rcpt-grid,
+  .rcpt-score-row {
+    grid-template-columns: 1fr;
+    gap: var(--s3);
   }
 }

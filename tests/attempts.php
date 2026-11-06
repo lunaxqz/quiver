@@ -189,12 +189,96 @@ try {
         && $pastGrace['result'] === 'closed'
         && ($afterGrace[$qEssayId]['answer_text'] ?? '') === 'Saved inside 15s grace window.');
 
+    // ---------------------------------------------------------------- Day 14: idempotent submit, objective scoring, blank written zeroing, overdue sweep & receipt
+    // At this point on $attId:
+    //   - Q1 (single, 2 pts): Hub selected (wrong -> 0 pts) — let's switch to Router (correct -> 2 pts) via final submit answers!
+    //   - Q2 (short, 2 pts): 'Domain Name System' (non-blank written) -> stays ungraded for teacher; let's clear Q3 essay to blank so we test blank auto-zeroing!
+    //   - Q3 (essay, 2 pts): we pass '' (blank) -> auto-zeroed (auto_points = 0, points_awarded = 0)
+    //   - Q4 (true_false, 2 pts): unanswered -> auto-scored 0 pts
+    $submitNow = gmdate('Y-m-d H:i:s', strtotime($deadlineNow . ' UTC') - 30);
+    check('an outsider cannot submit someone else\'s attempt',
+        AttemptService::submit($attId, $outsider, [], 'student', $submitNow)['result'] === 'not_found');
+
+    $sub1 = AttemptService::submit($attId, $student, [
+        $qSingleId => ['option_ids' => [$optRouterId], 'revision' => 4],
+        $qEssayId  => ['answer_text' => '   ', 'revision' => 2],
+    ], 'student', $submitNow);
+    check('student submit succeeds and returns submitted status (since non-blank short answer awaits teacher grading)',
+        $sub1['result'] === 'submitted'
+        && $sub1['status'] === 'submitted'
+        && $sub1['submit_reason'] === 'student'
+        && str_starts_with((string) $sub1['reference'], 'QV-'));
+
+    // Double-submit / idempotent check: calling submit a second time returns already_submitted with the exact same timestamp & reference.
+    $sub2 = AttemptService::submit($attId, $student, [], 'student', gmdate('Y-m-d H:i:s', strtotime($submitNow . ' UTC') + 5));
+    check('submitting a second time is idempotent and returns already_submitted',
+        $sub2['result'] === 'already_submitted'
+        && $sub2['status'] === 'submitted'
+        && $sub2['submitted_at'] === $sub1['submitted_at']
+        && $sub2['reference'] === $sub1['reference']);
+
+    // Verify objective scoring & blank-written auto-zeroing in responses table
+    $qTfId = (int) $payload['questions'][3]['id'];
+    $respMap = [];
+    foreach ($pdo->query('SELECT quiz_question_id, auto_points, points_awarded FROM responses WHERE attempt_id = ' . $attId)->fetchAll() as $rRow) {
+        $respMap[(int) $rRow['quiz_question_id']] = $rRow;
+    }
+    check('correct single-select answer is auto-scored full points (2.00)',
+        (float) ($respMap[$qSingleId]['auto_points'] ?? -1) === 2.0
+        && (float) ($respMap[$qSingleId]['points_awarded'] ?? -1) === 2.0);
+    check('unanswered true/false question is auto-scored 0.00',
+        (float) ($respMap[$qTfId]['auto_points'] ?? -1) === 0.0
+        && (float) ($respMap[$qTfId]['points_awarded'] ?? -1) === 0.0);
+    check('blank written essay is auto-zeroed immediately (0.00)',
+        (float) ($respMap[$qEssayId]['auto_points'] ?? -1) === 0.0
+        && (float) ($respMap[$qEssayId]['points_awarded'] ?? -1) === 0.0);
+    check('non-blank written short answer stays ungraded (points_awarded IS NULL) for teacher grading',
+        array_key_exists($qShortId, $respMap) && $respMap[$qShortId]['points_awarded'] === null);
+
+    // Receipt check: outsider gets null; student gets receipt without unreleased score or answer review
+    check('an outsider cannot view someone else\'s submission receipt',
+        AttemptService::receipt($attId, $outsider) === null);
+    $rcpt = AttemptService::receipt($attId, $student);
+    check('student receipt shows answered/unanswered counts and hides score & review before release',
+        $rcpt !== null
+        && $rcpt['answered_count'] === 2
+        && $rcpt['unanswered_count'] === 2
+        && $rcpt['score_released'] === false
+        && $rcpt['score'] === null
+        && $rcpt['review_released'] === false
+        && $rcpt['review_items'] === []);
+
+    // Overdue sweep check on an objective-only quiz (all-objective -> status becomes 'graded', submitted_at = deadline_at)
+    $objQuiz = $mkQuiz($classId, $teacher, -60, 60, 20, 1);
+    $qObj1 = $addQuestion($objQuiz, 1, 'single', 'Port for HTTPS?', null, [['80', false], ['443', true]]);
+    $qObj2 = $addQuestion($objQuiz, 2, 'multi', 'Pick private IPv4 ranges', null, [['10.0.0.0/8', true], ['192.168.0.0/16', true], ['8.8.8.0/24', false]]);
+    $racerStart = AttemptService::start($racer, $objQuiz);
+    $racerAttId = (int) $racerStart['attempt_id'];
+    $racerPayload = AttemptService::payload($racerAttId, $racer);
+    $opt443Id = (int) $racerPayload['questions'][0]['options'][1]['id'];
+    $opt10Id  = (int) $racerPayload['questions'][1]['options'][0]['id'];
+    $opt192Id = (int) $racerPayload['questions'][1]['options'][1]['id'];
+    AttemptService::autosave($racerAttId, $racer, [
+        $qObj1 => ['option_ids' => [$opt443Id], 'revision' => 1],
+        $qObj2 => ['option_ids' => [$opt10Id, $opt192Id], 'revision' => 1],
+    ]);
+    // Move racer's deadline to 30 seconds ago (past the 15s grace window) and run overdue sweep
+    $pastDeadline = gmdate('Y-m-d H:i:s', time() - 30);
+    $pdo->prepare('UPDATE quiz_attempts SET deadline_at = ? WHERE id = ?')->execute([$pastDeadline, $racerAttId]);
+    $sweptCount = AttemptService::finalizeOverdue($objQuiz, $teacher);
+    $sweptRow = $pdo->query('SELECT status, submit_reason, submitted_at, score FROM quiz_attempts WHERE id = ' . $racerAttId)->fetch();
+    check('overdue sweep finalizes abandoned attempt to graded with submit_reason=timeout and submitted_at=deadline_at',
+        $sweptCount === 1
+        && $sweptRow['status'] === 'graded'
+        && $sweptRow['submit_reason'] === 'timeout'
+        && $sweptRow['submitted_at'] === $pastDeadline
+        && (float) $sweptRow['score'] === 4.0);
+
     // ---------------------------------------------------------------- attempt limit
-    $pdo->exec("UPDATE quiz_attempts SET status = 'submitted', submit_reason = 'student', submitted_at = '" . utc_now() . "' WHERE id = " . (int) $first['attempt_id']);
     check('after submitting the only attempt, a new one is refused', AttemptService::start($student, $open)['result'] === 'limit');
     $home = AttemptService::homeForStudent($student);
     check('student home lists the quiz under the class with 1 of 1 used',
-        count($home) === 1 && count($home[0]['quizzes']) === 1 && $home[0]['quizzes'][0]['attempts_used'] === 1 && !$home[0]['quizzes'][0]['can_start']);
+        count($home) === 1 && count($home[0]['quizzes']) === 2 && $home[0]['quizzes'][0]['attempts_used'] === 1 && !$home[0]['quizzes'][0]['can_start']);
 
     // ---------------------------------------------------------------- not open / empty / unpublished
     $later = $mkQuiz($classId, $teacher, 60, 120, 30, 1);
@@ -204,7 +288,7 @@ try {
     $closed = $mkQuiz($classId, $teacher, -120, -60, 30, 1);
     $addQuestion($closed, 1, 'single', 'Q?', null, [['a', true], ['b', false]]);
     check('a closed quiz cannot be started', AttemptService::start($student, $closed)['result'] === 'not_open');
-    check('a closed quiz is left off student home', count(AttemptService::homeForStudent($student)[0]['quizzes']) === 2);
+    check('a closed quiz with no student attempts is left off student home', count(AttemptService::homeForStudent($student)[0]['quizzes']) === 3);
 
     $empty = $mkQuiz($classId, $teacher, -60, 60, 30, 1);
     check('a quiz with no questions cannot be started', AttemptService::start($student, $empty)['result'] === 'empty');

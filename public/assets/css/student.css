@@ -1,58 +1,309 @@
-/* Student quiz screens (Figma: Student quiz start, Student home). Uses tokens.css. */
+/* ==========================================================================
+   QUIVER Student Home & Quiz Screens (Claymorphic + Bold Class Differentiation)
+   ========================================================================== */
 
-.s-main--quiz { max-width: 760px; }
+.s-main--quiz { max-width: 780px; }
 
-/* ---- Title block: serif title, quiet meta line, no rule ---- */
+/* ---- Priority "Do This Next" Card on Student Home ---- */
+.priority-quiz {
+  background: var(--surface);
+  border-radius: var(--r-card-lg);
+  padding: 26px 30px;
+  box-shadow: var(--clay-card);
+  border: 2px solid var(--accent-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s5);
+  flex-wrap: wrap;
+  margin-bottom: var(--s5);
+}
+.priority-quiz--running {
+  border-color: var(--st-prog-bd);
+}
+.priority-quiz__eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.priority-quiz__class-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.priority-quiz__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.priority-quiz__head h2 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+.priority-quiz__meta {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+/* ---- Student Home Section Intro ---- */
+.stu-section-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.stu-section-bar h2 {
+  font-size: 21px;
+  font-weight: 800;
+}
+.tz-note {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+/* ---- Distinct, High-Clarity Class Cards (Easy Class Differentiation) ---- */
+.h-class {
+  background: var(--surface);
+  border-radius: var(--r-card-lg);
+  padding: 26px 28px;
+  box-shadow: var(--clay-card);
+  margin-bottom: 26px;
+  animation: qStaggerIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.h-class:nth-of-type(2) { animation-delay: 0.06s; }
+.h-class:nth-of-type(3) { animation-delay: 0.12s; }
+
+/* Outward-raised clay pillow/bump so the class title pops forward above its inset quiz wells */
+.class-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  margin-bottom: 22px;
+  border-radius: 24px;
+  background: var(--surface-hi);
+  box-shadow: var(--clay-bump);
+}
+.class-banner__main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.class-banner__badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.class-code-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--clay-primary);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.class-teacher-pill {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.class-banner__title {
+  font-family: var(--font-ui);
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0;
+}
+.class-banner__count {
+  padding: 7px 15px;
+  border-radius: 999px;
+  background: var(--well);
+  box-shadow: var(--clay-well);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.h-none {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin: 0;
+  padding: 16px 20px;
+  border-radius: 18px;
+  background: var(--well);
+  box-shadow: var(--clay-well);
+}
+
+/* ---- Join Class Card ---- */
+.join-card {
+  background: var(--surface);
+  border-radius: var(--r-surface);
+  padding: 26px 28px;
+  box-shadow: var(--clay-card);
+  margin-top: var(--s5);
+}
+.join-card__grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: var(--s5);
+  align-items: end;
+}
+.join-card h2 {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+.join-card__sub {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin-bottom: 16px;
+}
+.join-help-well {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--well);
+  box-shadow: var(--clay-well);
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.join-help-well strong {
+  display: block;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   Shared Quiz Start & Receipt Styles (kept compatible for secondary screens)
+   ========================================================================== */
 .q-head { margin-bottom: var(--s5); }
-.q-head h1 { font-family: var(--font-read); font-weight: 500; font-size: 30px; letter-spacing: -.01em; margin-bottom: var(--s2); }
-.q-meta { color: var(--ink-3); font-size: var(--t-sm); margin: 0; }
+.q-head h1 { font-size: 28px; font-weight: 800; margin-bottom: var(--s2); }
+.q-meta { color: var(--ink-2); font-size: var(--t-sm); margin: 0; }
 
-/* ---- Dark summary band: duration / questions / attempts ---- */
-.q-band { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s5);
-          background: var(--ink); color: var(--paper); border-radius: var(--r-surface);
-          padding: var(--s5) var(--s5); margin-bottom: var(--s4); }
-.q-band dt { order: 2; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: rgba(250,249,246,.75); }
-.q-band dd { order: 1; margin: 0 0 var(--s1); font-family: var(--font-read); font-size: 22px; }
-.q-band div { display: flex; flex-direction: column; }
+.q-band {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s4);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--r-surface);
+  box-shadow: var(--clay-card);
+  padding: 22px 26px;
+  margin-bottom: var(--s4);
+}
+.q-band dt {
+  order: 2;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.q-band dd {
+  order: 1;
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.q-band div {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: var(--well);
+  box-shadow: var(--clay-well);
+}
 
-/* ---- White card ---- */
-.q-card { background: var(--surface); border-radius: var(--r-surface); padding: var(--s5);
-          box-shadow: 0 1px 2px rgba(27,26,23,.06), 0 4px 16px rgba(27,26,23,.04); }
-.q-card h2 { font-family: var(--font-read); font-weight: 500; font-size: 20px; margin-bottom: var(--s3); }
-.q-statusrow { display: flex; justify-content: space-between; align-items: center; gap: var(--s3);
-               font-size: var(--t-sm); margin-bottom: var(--s4); }
-.q-mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 12px; color: var(--ink-3); letter-spacing: .02em; }
-.q-instructions { font-family: var(--font-read); font-size: var(--t-lg); line-height: 1.5;
-                  padding-bottom: var(--s4); border-bottom: 1px solid var(--line); margin-bottom: var(--s2); white-space: pre-line; }
+.q-card {
+  background: var(--surface);
+  border-radius: var(--r-surface);
+  padding: 26px 28px;
+  box-shadow: var(--clay-card);
+}
+.q-card h2 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: var(--s3);
+}
+.q-statusrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--t-sm);
+  margin-bottom: var(--s4);
+  flex-wrap: wrap;
+}
+.q-mono {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.q-instructions {
+  font-size: var(--t-base);
+  line-height: 1.6;
+  padding-bottom: var(--s4);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--s2);
+  white-space: pre-line;
+}
 
-/* ---- Rules list ---- */
 .q-rules { margin: 0; padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
 .q-rules div { display: grid; grid-template-columns: 180px 1fr; gap: var(--s4); padding: var(--s2) 0; font-size: var(--t-sm); }
-.q-rules dt { font-weight: 600; }
+.q-rules dt { font-weight: 700; }
 .q-rules dd { margin: 0; color: var(--ink-2); }
 
-.q-actions { display: flex; justify-content: space-between; align-items: center; gap: var(--s4); padding-top: var(--s4); }
-.q-actions p { margin: 0; font-size: var(--t-sm); color: var(--ink-3); }
+.q-actions { display: flex; justify-content: space-between; align-items: center; gap: var(--s4); padding-top: var(--s4); flex-wrap: wrap; }
+.q-actions p { margin: 0; font-size: var(--t-sm); color: var(--ink-2); }
 .q-actions form { margin: 0; flex-shrink: 0; }
-.btn--pill { border-radius: 999px; padding: var(--s2) var(--s4); min-height: 40px; font-size: var(--t-sm); font-weight: 500; }
-.q-foot { margin-top: var(--s4); font-size: 12px; color: var(--ink-3); }
+.q-foot { margin-top: var(--s4); font-size: 12.5px; color: var(--ink-3); }
 .q-blocked { font-size: var(--t-sm); color: var(--ink-2); margin: 0; }
 
-/* ---- Student home ---- */
-.h-class { margin-bottom: var(--s5); }
-.h-class__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); margin-bottom: var(--s3); }
-.h-class__head h2 { font-family: var(--font-read); font-weight: 500; font-size: 20px; margin: 0; }
-.h-quizzes { list-style: none; margin: 0; padding: 0; }
-.h-quiz { display: flex; justify-content: space-between; align-items: center; gap: var(--s4);
-          padding: var(--s3) 0; border-top: 1px solid var(--line); min-height: 56px; }
-.h-quiz__title { font-weight: 500; }
-.h-quiz__meta { font-size: var(--t-sm); color: var(--ink-3); }
-.h-none { font-size: var(--t-sm); color: var(--ink-3); margin: 0; padding-top: var(--s3); border-top: 1px solid var(--line); }
-
-@media (max-width: 640px) {
-  .q-band { grid-template-columns: 1fr; gap: var(--s3); }
-  .q-rules div { grid-template-columns: 1fr; gap: var(--s1); }
-  .q-actions { flex-direction: column; align-items: stretch; }
-  .q-actions .btn { width: 100%; }
-  .h-quiz { flex-direction: column; align-items: flex-start; }
+@media (max-width: 720px) {
+  .join-card__grid,
+  .q-band {
+    grid-template-columns: 1fr;
+  }
+  .class-banner__title {
+    font-size: 21px;
+  }
+  .q-rules div {
+    grid-template-columns: 1fr;
+    gap: var(--s1);
+  }
+  .q-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .q-actions .btn {
+    width: 100%;
+  }
 }

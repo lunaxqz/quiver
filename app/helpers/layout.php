@@ -5,39 +5,60 @@ require_once __DIR__ . '/status_mark.php';
 require_once __DIR__ . '/states.php';
 
 /**
- * Page frames. Use them like this on any page:
- *
- *   teacher_start('Question bank', 'bank');   // 'bank' highlights that rail link
- *   ...your page content...
- *   teacher_end();
- *
- * Administrators use teacher_start('Accounts', 'accounts', 'admin') (same frame, different links).
- * Student pages use student_start('Title') ... student_end().
+ * Shared page frames for QUIVER (Teacher, Administrator, Student, and Auth).
  */
+
+function _saved_theme(): string
+{
+    $c = $_COOKIE['quiver_theme'] ?? '';
+    return $c === 'dark' ? 'dark' : 'light';
+}
 
 function _page_head(string $title, array $extraCss = [], string $bodyClass = ''): void
 {
     $t = htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+
+    /* Keep timed quiz-taking screens calm with minimal motion */
+    $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    if (str_ends_with($scriptName, '/student/attempt.php')) {
+        $bodyClass = trim($bodyClass . ' calm-focus');
+    }
+
+    $theme = _saved_theme();
+
+    echo '<!doctype html><html lang="en" data-theme="' . $theme . '"><head><meta charset="utf-8">'
        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
        . '<title>' . $t . ' · QUIVER</title>'
+       . '<script src="/assets/js/theme-boot.js"></script>'
        . '<link rel="stylesheet" href="/assets/css/tokens.css">'
        . '<link rel="stylesheet" href="/assets/css/layout.css">'
-       . '<link rel="stylesheet" href="/assets/css/forms.css">';
+       . '<link rel="stylesheet" href="/assets/css/forms.css">'
+       . '<link rel="stylesheet" href="/assets/css/tables.css">';
     foreach ($extraCss as $css) {
         echo '<link rel="stylesheet" href="' . htmlspecialchars($css, ENT_QUOTES, 'UTF-8') . '">';
     }
+    echo '<script src="/assets/js/ui.js" defer></script>';
     echo '</head><body' . ($bodyClass !== '' ? ' class="' . htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8') . '"' : '') . '>';
 }
 
 /** "Sign out" must be a POST with a CSRF ticket (a plain link could be triggered by another site). */
-function _signout_form(): string
+function _signout_form(string $btnClass = 'btn btn--sm'): string
 {
     if (!function_exists('csrf_field')) {
-        return '<a href="/login.php">Sign in</a>';
+        return '<a class="' . htmlspecialchars($btnClass, ENT_QUOTES, 'UTF-8') . '" href="/login.php">Sign in</a>';
     }
     return '<form class="inline-form" method="post" action="/logout.php">' . csrf_field()
-         . '<button class="linklike" type="submit">Sign out</button></form>';
+         . '<button class="' . htmlspecialchars($btnClass, ENT_QUOTES, 'UTF-8') . '" type="submit">Sign out</button></form>';
+}
+
+/** Light / Dark theme toggle button rendered in headers and rails. */
+function _theme_toggle_btn(): string
+{
+    $isDark = _saved_theme() === 'dark';
+    $label  = $isDark ? '☀ Light' : '☾ Dark';
+    $title  = $isDark ? 'Switch to light theme' : 'Switch to dark theme';
+    return '<button class="theme-toggle" type="button" data-theme-toggle aria-pressed="'
+         . ($isDark ? 'true' : 'false') . '" title="' . $title . '">' . $label . '</button>';
 }
 
 /** A one-time message left by the previous page (e.g. "Password changed."). Printed once, then forgotten. */
@@ -58,27 +79,18 @@ function _who(): array
 }
 
 /**
- * $subtitle and $action are trusted HTML written by our own pages (escape any person's text first).
- * With either one, the title area matches the Figma headers: no rule underneath, button at the right.
+ * Teacher & Administrator workspace frame with numbered workflow navigation.
  */
 function teacher_start(string $title, string $active = '', string $role = 'teacher', array $extraCss = [], string $subtitle = '', string $action = ''): void
 {
     _page_head($title, $extraCss);
-    $links = $role === 'admin'
-        ? [
-            'accounts' => ['Accounts', '/admin/index.php'],
-            'classes'  => ['Classes',  '/admin/classes.php'],
-        ]
-        : [
-            'overview' => ['Overview',      '/teacher/index.php'],
-            'classes'  => ['Classes',       '/teacher/classes.php'],
-            'bank'     => ['Question bank', '/teacher/bank.php'],
-            'quizzes'  => ['Quizzes',       '/teacher/quizzes.php'],
-            'grading'  => ['Grading',       '/teacher/grading.php'],
-            'reports'  => ['Reports',       '/teacher/reports.php'],
-        ];
     $who = _who();
-    $roleLabel = $who['role'] !== '' ? ucfirst((string) $who['role']) : '';
+    $roleLabel = match ((string) ($who['role'] ?? '')) {
+        'admin'   => 'School Administrator',
+        'teacher' => 'Teacher',
+        default   => ucfirst((string) ($who['role'] ?? '')),
+    };
+
     $gradingBadge = 0;
     if ($role === 'teacher' && isset($who['id']) && (int) $who['id'] > 0 && class_exists('GradingService')) {
         try {
@@ -89,17 +101,58 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
     }
 
     echo '<div class="t-shell"><aside class="t-rail">'
-       . '<a class="t-brand" href="/">QUIVER</a><nav class="t-nav" aria-label="Main">';
-    foreach ($links as $key => [$label, $href]) {
-        $cur = $key === $active ? ' aria-current="page"' : '';
-        $badgeHtml = ($key === 'grading' && $gradingBadge > 0)
-            ? ' <span class="t-nav__badge" id="nav-grading-badge">' . $gradingBadge . '</span>'
-            : '';
-        echo '<a href="' . $href . '"' . $cur . '><span>' . $label . '</span>' . $badgeHtml . '</a>';
+       . '<div class="t-rail__top">'
+       . '<a class="brand-lockup" href="/"><span class="brand-mark" aria-hidden="true">Q</span><span>QUIVER</span></a>'
+       . _theme_toggle_btn()
+       . '</div>';
+
+    if ($role === 'admin') {
+        $adminLinks = [
+            'accounts' => ['1', 'People & passwords', '/admin/index.php'],
+            'classes'  => ['2', 'Class records',      '/admin/classes.php'],
+        ];
+        echo '<div class="t-nav-group"><p class="t-nav-heading">School office steps</p><nav class="t-nav" aria-label="Main">';
+        foreach ($adminLinks as $key => [$step, $label, $href]) {
+            $cur = $key === $active ? ' aria-current="page"' : '';
+            echo '<a href="' . $href . '"' . $cur . '>'
+               . '<span class="t-nav__step" aria-hidden="true">' . $step . '</span>'
+               . '<span class="t-nav__label">' . $label . '</span></a>';
+        }
+        echo '</nav></div>';
+    } else {
+        $ovCur = $active === 'overview' ? ' aria-current="page"' : '';
+        echo '<div class="t-nav-group"><p class="t-nav-heading">Start here</p><nav class="t-nav" aria-label="Overview">'
+           . '<a href="/teacher/index.php"' . $ovCur . '>'
+           . '<span class="t-nav__step" aria-hidden="true">★</span>'
+           . '<span class="t-nav__label">Today\'s Overview</span></a></nav></div>';
+
+        $teacherSteps = [
+            'classes' => ['1', 'Set Up Classes',   '/teacher/classes.php'],
+            'bank'    => ['2', 'Write Questions',  '/teacher/bank.php'],
+            'quizzes' => ['3', 'Schedule Quizzes', '/teacher/quizzes.php'],
+            'grading' => ['4', 'Grade Answers',    '/teacher/grading.php'],
+            'reports' => ['5', 'Share Scores',     '/teacher/reports.php'],
+        ];
+        echo '<div class="t-nav-group"><p class="t-nav-heading">Your teaching steps</p><nav class="t-nav" aria-label="Teaching workflow">';
+        foreach ($teacherSteps as $key => [$step, $label, $href]) {
+            $cur = $key === $active ? ' aria-current="page"' : '';
+            $badgeHtml = ($key === 'grading' && $gradingBadge > 0)
+                ? ' <span class="t-nav__badge" id="nav-grading-badge">' . $gradingBadge . '</span>'
+                : ($key === 'grading' ? ' <span class="t-nav__badge" id="nav-grading-badge" hidden>0</span>' : '');
+            echo '<a href="' . $href . '"' . $cur . '>'
+               . '<span class="t-nav__step" aria-hidden="true">' . $step . '</span>'
+               . '<span class="t-nav__label">' . $label . '</span>'
+               . $badgeHtml . '</a>';
+        }
+        echo '</nav></div>';
     }
-    echo '</nav><div class="t-user"><strong>' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong><br>'
-       . $roleLabel . ($roleLabel !== '' ? ' · ' : '') . _signout_form()
-       . '<br><a href="/change_password.php">Change password</a></div></aside>'
+
+    echo '<div class="t-user"><strong>' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong>'
+       . '<span class="t-user__meta">' . htmlspecialchars($roleLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
+       . '<div class="t-user__actions">'
+       . '<a class="btn btn--sm btn--quiet" href="/change_password.php">Password</a>'
+       . _signout_form('btn btn--sm')
+       . '</div></div></aside>'
        . '<main class="t-main"><div class="t-content">'
        . '<div class="page-head' . ($subtitle !== '' || $action !== '' ? ' page-head--clean' : '') . '"><div><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1>'
        . ($subtitle !== '' ? '<p class="page-head__sub">' . $subtitle . '</p>' : '') . '</div>' . $action . '</div>'
@@ -112,27 +165,42 @@ function teacher_end(): void
 }
 
 /**
- * Student frame. $context is shown after the name in the header (e.g. "IT301, Section B").
- * $ownHead = true skips the standard title bar so a page can draw its own (the Figma quiz screens do).
+ * Student frame with floating clay header, clear home navigation, and theme toggle.
  */
 function student_start(string $title, string $context = '', bool $ownHead = false, array $extraCss = []): void
 {
     _page_head($title, $extraCss);
     $who = _who();
+    $displayName = (string) $who['full_name'];
     if ($context !== '') {
-        $who['full_name'] = $who['full_name'] . ' · ' . $context;
+        $displayName .= ' · ' . $context;
     }
-    if ($ownHead) {
-        echo '<header class="s-header"><a class="s-brand" href="/">QUIVER</a>'
-           . '<span class="s-who">' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-           . ' · <a href="/change_password.php">Change password</a> · ' . _signout_form() . '</span></header>'
-           . '<main class="s-main">' . _flash_html();
-        return;
+
+    $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    $onAttempt  = str_ends_with($scriptName, '/student/attempt.php');
+    $onHome     = str_ends_with($scriptName, '/student/index.php');
+
+    echo '<header class="s-header">'
+       . '<div class="s-header__left">'
+       . '<a class="brand-lockup" href="/student/index.php"><span class="brand-mark" aria-hidden="true">Q</span><span>QUIVER</span></a>';
+    if (!$onAttempt) {
+        echo '<nav aria-label="Student navigation"><a class="btn btn--sm' . ($onHome ? '' : ' btn--quiet') . '" href="/student/index.php"'
+           . ($onHome ? ' aria-current="page"' : '') . '>My Classes &amp; Quizzes</a></nav>';
     }
-    echo '<header class="s-header"><a class="s-brand" href="/">QUIVER</a>'
-       . '<span class="s-who">' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ' · <a href="/change_password.php">Change password</a> · ' . _signout_form() . '</span></header>'
-       . '<main class="s-main"><div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>'
-       . _flash_html();
+    echo '</div>'
+       . '<div class="s-header__right">'
+       . _theme_toggle_btn()
+       . '<span class="s-who"><span class="s-who__name">' . htmlspecialchars($displayName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span></span>';
+    if (!$onAttempt) {
+        echo '<a class="btn btn--sm btn--quiet" href="/change_password.php">Password</a>'
+           . _signout_form('btn btn--sm');
+    }
+    echo '</div></header><main class="s-main">';
+
+    if (!$ownHead) {
+        echo '<div class="page-head"><h1>' . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1></div>';
+    }
+    echo _flash_html();
 }
 
 function student_end(): void

@@ -1,4 +1,15 @@
- @font-face {
+/* ==========================================================================
+   QUIVER Design Tokens — Claymorphic Warm Taupe System (Light + Dark)
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('../fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
   font-family: 'Inter';
   src: url('../fonts/inter-latin-wght-normal.woff2') format('woff2');
   font-weight: 100 900;
@@ -19,40 +30,327 @@
   font-style: italic;
   font-display: swap;
 }
- 
-:root {
-  --paper:#FAF9F6; --surface:#FFFFFF; --ink:#1B1A17; --ink-2:#5B5851; --ink-3:#77736A; --line:#E4E1DA;
-  --neutral:#77736A; --active:#2A5BD7; --attention:#B45309; --complete:#1F7A4D; --problem:#B3261E;
-  --font-ui:'Inter', system-ui, sans-serif;
-  --font-read:'Source Serif 4', Georgia, serif;
-  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:40px;
-  --r-control:6px; --r-surface:10px;
-  --t-sm:13px; --t-base:15px; --t-lg:18px; --t-xl:24px;
+
+:root,
+html[data-theme='light'] {
+  /* Base & Surfaces: Light neutral base #eef2f6, warm clay card #f6f4f0 */
+  --paper: #eef2f6;
+  --surface: #f6f4f0;
+  --surface-hi: #fcfbf9;
+  --well: #e9e6e0;
+  --well-hover: #e2ded6;
+
+  /* Warm dark brown ink — never pure black */
+  --ink: #3b342e;
+  --ink-2: #685d53;
+  --ink-3: #85786d;
+  --line: rgba(120, 105, 90, 0.16);
+
+  /* Luxury Warm Taupe Accent (#8a6a4f) */
+  --accent: #8a6a4f;
+  --accent-deep: #73563e;
+  --accent-soft: #efe6dc;
+  --accent-border: rgba(138, 106, 79, 0.28);
+  --accent-ink: #fdfbf9;
+
+  /* Semantic foreground colours */
+  --neutral: #5e564f;
+  --active: #1e4f8a;
+  --attention: #8a4d0e;
+  --complete: #1d633d;
+  --problem: #922724;
+
+  /* Soft Pastel Status Tokens (Blue=open, Amber=in progress, Green=done, Grey=not yet, Red=problem) */
+  --st-open-bg: #dcebfb;  --st-open-ink: #1e4f8a;  --st-open-bd: #b6d5f7;
+  --st-prog-bg: #fcecd2;  --st-prog-ink: #8a4d0e;  --st-prog-bd: #f5d29d;
+  --st-done-bg: #dcf2e4;  --st-done-ink: #1d633d;  --st-done-bd: #b3e2c5;
+  --st-wait-bg: #e7e5e0;  --st-wait-ink: #5c544d;  --st-wait-bd: #d3cfc7;
+  --st-prob-bg: #fadede;  --st-prob-ink: #922724;  --st-prob-bd: #f3babc;
+
+  /* Claymorphic Shadows: Raised Cards, Raised Inner Bumps, Buttons & Inset Wells */
+  --clay-card:
+    10px 10px 22px rgba(120, 105, 90, 0.16),
+    -8px -8px 18px rgba(255, 255, 255, 0.85),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.85),
+    inset -4px -4px 8px rgba(130, 115, 100, 0.14);
+
+  --clay-bump:
+    8px 10px 20px rgba(115, 98, 80, 0.18),
+    -6px -6px 14px rgba(255, 255, 255, 0.94),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.96),
+    inset -4px -4px 8px rgba(130, 112, 95, 0.15);
+
+  --clay-btn:
+    6px 6px 14px rgba(120, 105, 90, 0.17),
+    -5px -5px 12px rgba(255, 255, 255, 0.88),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.90),
+    inset -3px -3px 6px rgba(130, 115, 100, 0.13);
+
+  --clay-primary:
+    8px 8px 18px rgba(115, 86, 62, 0.28),
+    -4px -4px 12px rgba(255, 255, 255, 0.76),
+    inset 2px 2px 5px rgba(255, 255, 255, 0.35),
+    inset -3px -3px 7px rgba(65, 45, 30, 0.28);
+
+  --clay-press:
+    inset 4px 4px 9px rgba(110, 95, 80, 0.24),
+    inset -3px -3px 7px rgba(255, 255, 255, 0.82);
+
+  --clay-well:
+    inset 4px 4px 9px rgba(125, 110, 95, 0.16),
+    inset -4px -4px 9px rgba(255, 255, 255, 0.82);
+
+  /* Typography, Spacing & Extra-Rounded Clay Shapes */
+  --font-ui: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-read: 'Plus Jakarta Sans', 'Source Serif 4', system-ui, sans-serif;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 40px;
+  --r-control: 999px;
+  --r-input: 18px;
+  --r-row: 20px;
+  --r-surface: 26px;
+  --r-card-lg: 30px;
+  --t-sm: 13.5px;
+  --t-base: 15px;
+  --t-lg: 19px;
+  --t-xl: 28px;
 }
- 
+
+html[data-theme='dark'] {
+  --paper: #1e1c1a;
+  --surface: #2b2724;
+  --surface-hi: #36312d;
+  --well: #211e1b;
+  --well-hover: #26221f;
+
+  --ink: #f3ede6;
+  --ink-2: #cbbeb2;
+  --ink-3: #9e9185;
+  --line: rgba(255, 245, 235, 0.10);
+
+  --accent: #b88f6c;
+  --accent-deep: #cda582;
+  --accent-soft: #3a3129;
+  --accent-border: rgba(184, 143, 108, 0.34);
+  --accent-ink: #1e1915;
+
+  --neutral: #cfc7be;
+  --active: #abd2fa;
+  --attention: #fbd397;
+  --complete: #a8e8c3;
+  --problem: #f9b8ba;
+
+  --st-open-bg: #1e334a;  --st-open-ink: #abd2fa;  --st-open-bd: #2e4f73;
+  --st-prog-bg: #423018;  --st-prog-ink: #fbd397;  --st-prog-bd: #694b22;
+  --st-done-bg: #1b3a2a;  --st-done-ink: #a8e8c3;  --st-done-bd: #2a5c42;
+  --st-wait-bg: #332f2c;  --st-wait-ink: #cfc7be;  --st-wait-bd: #4a443f;
+  --st-prob-bg: #472122;  --st-prob-ink: #f9b8ba;  --st-prob-bd: #6e3234;
+
+  --clay-card:
+    10px 10px 24px rgba(10, 8, 7, 0.55),
+    -6px -6px 16px rgba(68, 61, 55, 0.25),
+    inset 2px 2px 5px rgba(255, 248, 240, 0.07),
+    inset -4px -4px 9px rgba(10, 8, 7, 0.42);
+
+  --clay-bump:
+    8px 10px 20px rgba(8, 6, 5, 0.62),
+    -5px -5px 12px rgba(84, 75, 67, 0.28),
+    inset 2px 2px 5px rgba(255, 248, 240, 0.12),
+    inset -3px -3px 8px rgba(10, 8, 7, 0.45);
+
+  --clay-btn:
+    5px 5px 12px rgba(10, 8, 7, 0.50),
+    -4px -4px 10px rgba(68, 61, 55, 0.22),
+    inset 2px 2px 4px rgba(255, 248, 240, 0.09),
+    inset -3px -3px 6px rgba(10, 8, 7, 0.40);
+
+  --clay-primary:
+    7px 7px 18px rgba(10, 8, 7, 0.55),
+    -4px -4px 12px rgba(80, 68, 58, 0.24),
+    inset 2px 2px 5px rgba(255, 255, 255, 0.28),
+    inset -3px -3px 7px rgba(55, 38, 24, 0.38);
+
+  --clay-press:
+    inset 4px 4px 9px rgba(8, 7, 6, 0.65),
+    inset -3px -3px 7px rgba(70, 62, 55, 0.22);
+
+  --clay-well:
+    inset 4px 4px 10px rgba(10, 8, 7, 0.60),
+    inset -3px -3px 8px rgba(65, 58, 52, 0.20);
+}
+
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
-  font: var(--t-base)/1.5 var(--font-ui);
+  font: 500 var(--t-base)/1.55 var(--font-ui);
   background: var(--paper);
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+  transition: background-color 0.28s ease, color 0.28s ease;
 }
-h1, h2, h3 { margin: 0; font-weight: 600; line-height: 1.25; }
-h1 { font-size: var(--t-xl); }
-h2 { font-size: var(--t-lg); }
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--ink);
+}
+h1 { font-size: var(--t-xl); font-weight: 800; }
+h2 { font-size: var(--t-lg); font-weight: 700; }
 p  { margin: 0 0 var(--s3); }
 a  { color: var(--ink); }
-:focus-visible { outline: 2px solid var(--active); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
- 
-.mark { --c:var(--neutral); display:inline-flex; align-items:center; gap:var(--s2); }
-.mark__ring { width:22px; height:22px; border-radius:50%; border:2px solid var(--c);
-              display:grid; place-items:center; font-size:11px; color:var(--c); }
-.mark__label { color: var(--ink); }
-[data-state='scheduled'] { --c:var(--neutral); } [data-state='scheduled'] .mark__ring { border-style:dashed; }
-[data-state='active']    { --c:var(--active); }  [data-state='active']    .mark__ring::after { content:'●'; }
-[data-state='attention'] { --c:var(--attention); } [data-state='attention'] .mark__ring { border:4px double var(--c); }
-[data-state='attention'] .mark__ring::after { content:'!'; }
-[data-state='complete']  { --c:var(--complete); } [data-state='complete']  .mark__ring::after { content:'✓'; }
-[data-state='problem']   { --c:var(--problem); }  [data-state='problem']   .mark__ring::after { content:'×'; }
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ==========================================================================
+   STATUS PILL (.mark) — Always Icon + Word + Soft Pastel Colour
+   ========================================================================== */
+.mark {
+  --st-bg: var(--st-wait-bg);
+  --st-fg: var(--st-wait-ink);
+  --st-bd: var(--st-wait-bd);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--st-bg);
+  color: var(--st-fg);
+  border: 1px solid var(--st-bd);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.mark:has(.mark__label:empty) {
+  padding: 6px;
+}
+.mark__ring {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--st-fg);
+  flex-shrink: 0;
+}
+.mark__ring::after { content: '○'; }
+.mark__label { color: var(--st-fg); font-weight: 700; }
+
+[data-state='neutral'],
+[data-state='scheduled'] {
+  --st-bg: var(--st-wait-bg);
+  --st-fg: var(--st-wait-ink);
+  --st-bd: var(--st-wait-bd);
+}
+[data-state='scheduled'] .mark__ring::after { content: '○'; }
+[data-state='neutral']   .mark__ring::after { content: '○'; }
+
+[data-state='active'] {
+  --st-bg: var(--st-open-bg);
+  --st-fg: var(--st-open-ink);
+  --st-bd: var(--st-open-bd);
+}
+[data-state='active'] .mark__ring::after { content: '●'; }
+
+[data-state='attention'] {
+  --st-bg: var(--st-prog-bg);
+  --st-fg: var(--st-prog-ink);
+  --st-bd: var(--st-prog-bd);
+}
+[data-state='attention'] .mark__ring {
+  animation: qGentlePulse 2.2s ease-in-out infinite;
+}
+[data-state='attention'] .mark__ring::after { content: '◔'; font-size: 13px; }
+
+[data-state='complete'] {
+  --st-bg: var(--st-done-bg);
+  --st-fg: var(--st-done-ink);
+  --st-bd: var(--st-done-bd);
+}
+[data-state='complete'] .mark__ring::after { content: '✓'; }
+
+[data-state='problem'] {
+  --st-bg: var(--st-prob-bg);
+  --st-fg: var(--st-prob-ink);
+  --st-bd: var(--st-prob-bd);
+}
+[data-state='problem'] .mark__ring::after { content: '!'; font-weight: 800; }
+
+/* Small Status Legend wherever states are introduced */
+.status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 11px 16px;
+  border-radius: 18px;
+  background: var(--well);
+  box-shadow: var(--clay-well);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-bottom: var(--s4);
+}
+.status-legend__title {
+  font-weight: 700;
+  color: var(--ink);
+  margin-right: 4px;
+}
+.status-legend .mark {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ==========================================================================
+   SMOOTH KEYFRAMES & REDUCED / FOCUS-CALM MOTION GUARDS
+   IMPORTANT: End at transform: none; filter: none; so fixed modals are never trapped!
+   ========================================================================== */
+@keyframes qGentlePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.22); opacity: 0.68; }
+}
+
+@keyframes qFrameIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes qStaggerIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Focus-critical screen (timed quiz attempt): keep motion minimal and calm */
+body.calm-focus *,
+body.calm-focus *::before,
+body.calm-focus *::after {
+  animation: none !important;
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+    transform: none !important;
+  }
+}

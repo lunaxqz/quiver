@@ -1,37 +1,323 @@
-/* Panels, tables, filters and pagination. Reused by every list screen. */
+/* ==========================================================================
+   QUIVER Claymorphic Panels, Inset Well Lists, Tables & Secondary Action Menus
+   ========================================================================== */
 
-.page-desc { color:var(--ink-2); margin:calc(-1 * var(--s2)) 0 var(--s5); max-width:70ch; }
+.page-desc {
+  color: var(--ink-2);
+  margin: calc(-1 * var(--s3)) 0 var(--s5);
+  max-width: 68ch;
+  font-size: var(--t-base);
+}
 
-.panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-surface); padding:var(--s5); margin-bottom:var(--s5); }
-.panel h2 { font-size:var(--t-lg); margin-bottom:var(--s4); }
-.panel__note { color:var(--ink-3); font-size:var(--t-sm); margin:var(--s3) 0 0; }
+.panel {
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--r-surface);
+  padding: 26px 28px;
+  margin-bottom: var(--s5);
+  box-shadow: var(--clay-card);
+}
+.panel h2 {
+  font-size: 20px;
+  margin-bottom: var(--s4);
+}
+.panel__head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.panel__head-row h2 {
+  margin: 0;
+}
+.panel__title-tight {
+  margin-bottom: 6px !important;
+}
+.panel__sublead {
+  margin-bottom: 18px;
+}
+.panel__note {
+  color: var(--ink-3);
+  font-size: var(--t-sm);
+  margin: var(--s3) 0 0;
+}
 
-.select { height:40px; padding:0 var(--s3); font:inherit; color:var(--ink); background:var(--surface); border:1px solid #DAD7CF; border-radius:var(--r-control); }
-.filters { display:flex; flex-wrap:wrap; gap:var(--s2); margin-bottom:var(--s4); }
-.filters .input { height:40px; flex:1 1 180px; width:auto; border-radius:var(--r-control); }
+.select {
+  height: 46px;
+  padding: 0 14px;
+  font: 600 var(--t-sm)/1.4 var(--font-ui);
+  color: var(--ink);
+  background: var(--well);
+  border: 2px solid transparent;
+  border-radius: var(--r-input);
+  box-shadow: var(--clay-well);
+}
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface-hi);
+}
 
-.table-wrap { overflow-x:auto; }
-.table { width:100%; border-collapse:collapse; font-size:var(--t-sm); }
-.table th { text-align:left; font-weight:500; color:var(--ink-3); padding:var(--s2) var(--s3); border-bottom:1px solid var(--line); white-space:nowrap; }
-.table td { padding:var(--s3); border-bottom:1px solid var(--line); vertical-align:middle; min-height:40px; }
-.table tr:last-child td { border-bottom:0; }
-.table__sub { display:block; color:var(--ink-3); font-size:12px; }
-.table__actions { white-space:nowrap; text-align:right; }
-.table__actions .inline-form { margin-left:var(--s2); }
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: var(--s4);
+  align-items: center;
+}
+.filters .input {
+  height: 46px;
+  flex: 1 1 190px;
+  min-width: 0;
+  width: auto;
+  border-radius: var(--r-input);
+}
 
-.btn--sm { padding:4px 10px; font-size:12px; }
+/* ---- Tactile Inset Clay Well List Rows (Zero Horizontal Scrollbars) ---- */
+.well-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.well-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 18px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-radius: var(--r-row);
+  background: var(--well);
+  box-shadow: var(--clay-well);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
+  animation: qStaggerIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.well-row:nth-child(2) { animation-delay: 0.04s; }
+.well-row:nth-child(3) { animation-delay: 0.08s; }
+.well-row:nth-child(4) { animation-delay: 0.12s; }
+.well-row:nth-child(5) { animation-delay: 0.16s; }
+.well-row:hover {
+  transform: translateX(3px);
+  background: var(--well-hover);
+}
+.well-row:focus-within,
+.well-row:has(details[open]) {
+  z-index: 15;
+}
+.well-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 250px;
+  min-width: 0;
+}
+.well-row__top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.well-row__title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+a.well-row__title:hover {
+  text-decoration: underline;
+}
+.well-row__meta {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.well-row__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
 
-.pager { display:flex; align-items:center; justify-content:space-between; margin-top:var(--s4); font-size:var(--t-sm); color:var(--ink-2); }
-.pager__links { display:flex; gap:var(--s2); }
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--clay-btn);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+  line-height: 1.3;
+}
 
-/* One-time secret (temporary password) */
-.secret { display:block; margin:var(--s2) 0; padding:var(--s3) var(--s4); background:var(--paper); border:1px dashed var(--ink-3);
-          border-radius:var(--r-control); font:600 18px/1.4 ui-monospace, Consolas, monospace; letter-spacing:.04em; user-select:all; }
+/* ---- Secondary Action Overflow Menu (keeps 1 obvious primary action per row) ---- */
+.row-more {
+  position: relative;
+  display: inline-block;
+}
+.row-more summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  box-shadow: var(--clay-btn);
+  font: 800 13px/1 var(--font-ui);
+  user-select: none;
+}
+.row-more summary::-webkit-details-marker { display: none; }
+.row-more summary:hover { color: var(--ink); }
+.row-more__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  min-width: 195px;
+  padding: 10px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--clay-card);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.row-more__menu .btn {
+  width: 100%;
+  justify-content: flex-start;
+}
 
-/* Administrator page: directories on the left, forms on the right (Figma: 702 + 370) */
-.admin-grid { display:grid; grid-template-columns:minmax(0, 1fr) 370px; gap:var(--s5); align-items:start; }
-@media (max-width: 1100px) { .admin-grid { grid-template-columns:1fr; } }
+/* ---- Shared Data Tables (Clean Rounded Cells, Never Rectangular tr Shadows) ---- */
+.table-wrap { overflow-x: auto; }
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+  font-size: var(--t-sm);
+}
+.table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 0 16px 4px;
+}
+.table tbody tr {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.table tbody tr:hover {
+  transform: translateX(3px);
+}
+.table td {
+  padding: 14px 16px;
+  vertical-align: middle;
+  min-height: 48px;
+  background: var(--well);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.table tbody tr:hover td {
+  background: var(--well-hover);
+}
+.table td:first-child {
+  border-left: 1px solid var(--line);
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+}
+.table td:last-child {
+  border-right: 1px solid var(--line);
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
+}
 
-/* Keep names and dates readable in narrow tables */
-.table td:first-child { min-width:150px; }
-.table td:nth-child(4) { white-space:nowrap; }
+.table__sub {
+  display: block;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+.table__actions {
+  white-space: nowrap;
+  text-align: right;
+}
+.table__actions .inline-form {
+  margin-left: var(--s2);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--s4);
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+.pager__links { display: flex; gap: var(--s2); }
+
+/* ---- One-Time Starter Password Well ---- */
+.issued-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.issued-title {
+  font-size: 16px;
+}
+.issued-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.secret {
+  display: block;
+  margin: var(--s3) 0;
+  padding: 14px 18px;
+  background: var(--well);
+  box-shadow: var(--clay-well);
+  border: 1.5px dashed var(--accent);
+  border-radius: 18px;
+  font: 700 20px/1.4 ui-monospace, Consolas, monospace;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  user-select: all;
+}
+
+/* ---- Administrator Split Grid ---- */
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 348px;
+  gap: 22px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .admin-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .well-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .well-row__actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}

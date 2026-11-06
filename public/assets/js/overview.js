@@ -28,15 +28,15 @@
 
   function subtitleForCount(count, classesCount) {
     if (classesCount === 0) {
-      return 'Nothing needs you right now. Everything is on track.';
+      return 'Welcome! Follow the numbered steps below to set up your first class and quiz.';
     }
     if (count === 0) {
-      return 'Nothing needs you right now. Everything else is on track.';
+      return 'Nothing needs your attention right now. All your classes are on track.';
     }
     if (count === 1) {
-      return 'One thing needs you today. Everything else is on track.';
+      return 'One thing needs your attention today. Everything else is on track.';
     }
-    return numberWord(count, true) + ' things need you today. Everything else is on track.';
+    return numberWord(count, true) + ' things need your attention today. Everything else is on track.';
   }
 
   function syncHeroCountdown(seconds) {
@@ -76,6 +76,21 @@
     return span;
   }
 
+  function buildArrowBtn(href, label, extraCls) {
+    var a = document.createElement('a');
+    a.className = 'btn ' + (extraCls || '');
+    a.href = href || '#';
+    var txt = document.createElement('span');
+    txt.textContent = label || 'Open';
+    var arr = document.createElement('span');
+    arr.className = 'btn__arrow';
+    arr.setAttribute('aria-hidden', 'true');
+    arr.textContent = '\u2192';
+    a.appendChild(txt);
+    a.appendChild(arr);
+    return a;
+  }
+
   function renderHero(heroItem) {
     if (!heroMount) {
       return;
@@ -89,20 +104,11 @@
 
     var sec = document.createElement('section');
     sec.className = 'today-hero';
-    sec.setAttribute('aria-label', 'Closing soon');
+    sec.setAttribute('aria-label', 'Quiz closing soon');
 
     var left = document.createElement('div');
     left.className = 'today-hero__left';
-
-    var badge = document.createElement('div');
-    badge.className = 'today-hero__badge';
-    var ring = document.createElement('span');
-    ring.className = 'today-hero__ring';
-    ring.setAttribute('aria-hidden', 'true');
-    var badgeTxt = document.createElement('span');
-    badgeTxt.textContent = 'Closing soon';
-    badge.appendChild(ring);
-    badge.appendChild(badgeTxt);
+    left.appendChild(buildStatusMark('attention', 'Closing soon'));
 
     var h2 = document.createElement('h2');
     h2.className = 'today-hero__headline';
@@ -112,12 +118,8 @@
     meta.className = 'today-hero__meta';
     meta.textContent = heroItem.submeta || '';
 
-    var btn = document.createElement('a');
-    btn.className = 'today-hero__btn';
-    btn.href = heroItem.action_href || '#';
-    btn.textContent = heroItem.action_label || 'Open live view';
+    var btn = buildArrowBtn(heroItem.action_href || '#', heroItem.action_label || 'Open live view', 'btn--primary btn--pill');
 
-    left.appendChild(badge);
     left.appendChild(h2);
     left.appendChild(meta);
     left.appendChild(btn);
@@ -127,31 +129,28 @@
 
     var tLabel = document.createElement('div');
     tLabel.className = 'today-hero__timer-label';
-    tLabel.textContent = 'Time remaining';
+    tLabel.textContent = 'Time left before quiz closes';
 
     var tVal = document.createElement('div');
     tVal.className = 'today-hero__timer';
     tVal.id = 'today-hero-timer';
     tVal.textContent = formatMMSS(heroItem.remaining_seconds || 0);
 
-    var grid = document.createElement('div');
-    grid.className = 'today-hero__grid';
-    grid.setAttribute('aria-hidden', 'true');
-    var cells = Array.isArray(heroItem.cells) ? heroItem.cells : [];
-    for (var i = 0; i < cells.length; i++) {
-      var cell = document.createElement('span');
-      cell.className = 'hero-cell hero-cell--' + cells[i];
-      grid.appendChild(cell);
+    var counts = document.createElement('div');
+    counts.className = 'today-hero__counts';
+    counts.setAttribute('aria-label', 'Live student progress');
+    var subCnt = Number(heroItem.submitted_count) || 0;
+    var wrkCnt = Number(heroItem.working_count) || 0;
+    var dscCnt = Number(heroItem.disconnected_count) || 0;
+    counts.appendChild(buildStatusMark('complete', subCnt + ' handed in'));
+    counts.appendChild(buildStatusMark('attention', wrkCnt + ' working'));
+    if (dscCnt > 0) {
+      counts.appendChild(buildStatusMark('problem', dscCnt + ' offline'));
     }
-
-    var legend = document.createElement('div');
-    legend.className = 'today-hero__legend';
-    legend.textContent = 'Solid: submitted · Outlined: working · Dashed: disconnected';
 
     right.appendChild(tLabel);
     right.appendChild(tVal);
-    right.appendChild(grid);
-    right.appendChild(legend);
+    right.appendChild(counts);
 
     sec.appendChild(left);
     sec.appendChild(right);
@@ -167,18 +166,17 @@
     listMount.textContent = '';
 
     if ((!Array.isArray(alsoToday) || alsoToday.length === 0) && !hasHero) {
-      // Calm empty state when nothing needs the teacher right now
       if (summary && summary.classes_count === 0) {
         var emptyDiv = document.createElement('div');
         emptyDiv.className = 'state';
         var eh3 = document.createElement('h3');
-        eh3.textContent = 'Nothing needs you right now';
+        eh3.textContent = 'Ready for your first class';
         var ep = document.createElement('p');
-        ep.textContent = 'Create a class to get started. Your Today rail will surface quizzes closing soon, grading, and release items here.';
+        ep.textContent = 'Start with Step 1: create a class and share the short join code with your students.';
         var ea = document.createElement('a');
         ea.className = 'btn btn--primary';
         ea.href = '/teacher/classes.php';
-        ea.textContent = 'Create a class';
+        ea.textContent = 'Set up your first class';
         emptyDiv.appendChild(eh3);
         emptyDiv.appendChild(ep);
         emptyDiv.appendChild(ea);
@@ -190,20 +188,20 @@
       calm.className = 'today-calm-card';
       var cLeft = document.createElement('div');
       cLeft.className = 'today-calm-card__left';
-      cLeft.appendChild(buildStatusMark('complete', ''));
+      cLeft.appendChild(buildStatusMark('complete', 'All clear'));
       var cText = document.createElement('div');
       var cTitle = document.createElement('p');
       cTitle.className = 'today-calm-card__title';
       cTitle.textContent = 'Nothing needs you right now';
       var cSub = document.createElement('p');
       cSub.className = 'today-calm-card__sub';
-      cSub.textContent = 'All active quizzes, grading queues, and result releases are up to date.';
+      cSub.textContent = 'All open quizzes, written grading, and score releases are up to date.';
       cText.appendChild(cTitle);
       cText.appendChild(cSub);
       cLeft.appendChild(cText);
 
       var cBtn = document.createElement('a');
-      cBtn.className = 'today-row__btn';
+      cBtn.className = 'btn btn--pill';
       cBtn.href = '/teacher/quizzes.php';
       cBtn.textContent = 'View quizzes';
 
@@ -219,11 +217,11 @@
 
     var card = document.createElement('section');
     card.className = 'today-card';
-    card.setAttribute('aria-label', hasHero ? 'Also today' : 'Today');
+    card.setAttribute('aria-label', hasHero ? 'Also today' : 'Needs your attention today');
 
     var head = document.createElement('div');
     head.className = 'today-card__head';
-    head.textContent = hasHero ? 'Also today' : 'Today';
+    head.textContent = hasHero ? 'Also on your list today' : 'Needs your attention today';
 
     var ul = document.createElement('ul');
     ul.className = 'today-list';
@@ -244,11 +242,7 @@
 
       var actCell = document.createElement('div');
       actCell.className = 'today-row__action';
-      var btn = document.createElement('a');
-      btn.className = 'today-row__btn';
-      btn.href = item.action_href || '#';
-      btn.textContent = item.action_label || 'Open';
-      actCell.appendChild(btn);
+      actCell.appendChild(buildArrowBtn(item.action_href || '#', item.action_label || 'Open', 'btn--sm'));
 
       li.appendChild(markCell);
       li.appendChild(detailCell);
@@ -269,9 +263,9 @@
     var s = Number(summary.students_count) || 0;
     var q = Number(summary.active_quizzes_count) || 0;
     summaryEl.textContent =
-      c + ' ' + (c === 1 ? 'class' : 'classes') + ' · ' +
-      s + ' ' + (s === 1 ? 'student' : 'students') + ' · ' +
-      q + ' active ' + (q === 1 ? 'quiz' : 'quizzes');
+      c + ' active ' + (c === 1 ? 'class' : 'classes') + ' \u00B7 ' +
+      s + ' enrolled ' + (s === 1 ? 'student' : 'students') + ' \u00B7 ' +
+      q + ' published ' + (q === 1 ? 'quiz' : 'quizzes');
   }
 
   function renderThisWeek(thisWeek) {
@@ -279,21 +273,19 @@
       return;
     }
     var tbody = weekMount.querySelector('tbody');
-    if (!tbody || !Array.isArray(thisWeek)) {
-      return;
-    }
-    if (thisWeek.length === 0) {
+    if (!tbody || !Array.isArray(thisWeek) || thisWeek.length === 0) {
       return;
     }
     tbody.textContent = '';
     for (var i = 0; i < thisWeek.length; i++) {
       var r = thisWeek[i];
       var tr = document.createElement('tr');
+      var quizHref = r.href || ('/teacher/quiz.php?id=' + r.id);
 
       var tdQuiz = document.createElement('td');
       var a = document.createElement('a');
       a.className = 'week-quiz-title';
-      a.href = r.href || ('/teacher/quiz.php?id=' + r.id);
+      a.href = quizHref;
       a.textContent = r.title || '';
       var meta = document.createElement('span');
       meta.className = 'week-quiz-meta';
@@ -301,8 +293,10 @@
       tdQuiz.appendChild(a);
       tdQuiz.appendChild(meta);
 
+      var rawLbl = r.status_label || '';
+      var plainLbl = rawLbl === 'Open' ? 'Open now' : (rawLbl === 'Scheduled' ? 'Not open yet' : rawLbl);
       var tdStatus = document.createElement('td');
-      tdStatus.appendChild(buildStatusMark(r.status_state || 'neutral', r.status_label || ''));
+      tdStatus.appendChild(buildStatusMark(r.status_state || 'neutral', plainLbl));
 
       var tdWin = document.createElement('td');
       tdWin.textContent = r.window_label || '';
@@ -323,10 +317,18 @@
       wrap.appendChild(bar);
       tdSub.appendChild(wrap);
 
+      var actTxt = rawLbl === 'Open' ? 'Live view'
+        : (rawLbl === 'Needs grading' ? 'Grade answers'
+        : (rawLbl === 'Graded' ? 'Share scores' : 'Preview'));
+      var isPrim = rawLbl === 'Open' || rawLbl === 'Needs grading';
+      var tdAct = document.createElement('td');
+      tdAct.appendChild(buildArrowBtn(quizHref, actTxt, isPrim ? 'btn--sm btn--primary' : 'btn--sm'));
+
       tr.appendChild(tdQuiz);
       tr.appendChild(tdStatus);
       tr.appendChild(tdWin);
       tr.appendChild(tdSub);
+      tr.appendChild(tdAct);
       tbody.appendChild(tr);
     }
   }
@@ -378,7 +380,6 @@
       });
   }
 
-  // Initialize hero countdown if server rendered a Closing Soon hero card
   if (rootEl) {
     var initSec = Number(rootEl.getAttribute('data-hero-remaining') || '0');
     if (initSec > 0) {

@@ -91,84 +91,224 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     }
 }
 
+/* Open the registration tab & exact step automatically if a student submitted registration with errors */
+$showRegister = !empty($reg['errors']) || (($_POST['action'] ?? '') === 'register');
+$regInitialStep = 1;
+if (!empty($reg['errors'])) {
+    if (isset($reg['errors']['first_name']) || isset($reg['errors']['last_name'])) {
+        $regInitialStep = 1;
+    } elseif (isset($reg['errors']['reg_username']) || isset($reg['errors']['reg_password']) || isset($reg['errors']['reg_confirm'])) {
+        $regInitialStep = 2;
+    } else {
+        $regInitialStep = 3;
+    }
+}
+
 _page_head('Sign in', ['/assets/css/auth.css'], 'auth');
 ?>
 <header class="auth-top">
-  <a class="auth-brand" href="/">QUIVER</a>
-  <span class="auth-tag">Classroom assessment, thoughtfully organised.</span>
+  <a class="brand-lockup" href="/">
+    <span class="brand-mark" aria-hidden="true">Q</span>
+    <span>QUIVER</span>
+  </a>
+  <div class="auth-tag">
+    <span>Calm, school-managed classroom quizzes</span>
+    <?= _theme_toggle_btn() ?>
+  </div>
 </header>
 
 <main class="auth-main">
-  <h1>A quiet place to do your best work.</h1>
-  <p class="auth-lede">Sign in to your classroom. Your account takes you to the right workspace.</p>
+  <div class="auth-hero">
+    <h1>Welcome to your classroom</h1>
+    <p class="auth-lede">Sign in to open your classes, or create a student account in three quick steps.</p>
+  </div>
 
   <?php if ($notice !== null): ?>
     <div class="alert alert--notice" role="status"><?= e($notice) ?></div>
   <?php endif; ?>
 
-  <div class="auth-grid">
-    <div>
-      <section class="card" id="signin" aria-labelledby="signin-title">
-        <h2 id="signin-title">Welcome back</h2>
-        <p class="card__intro">Students, teachers and administrators use the same sign-in.</p>
-
-        <?php if ($login['error'] !== ''): ?>
-          <div class="alert alert--error" role="alert"><?= e($login['error']) ?></div>
-        <?php endif; ?>
-
-        <form method="post" action="/login.php#signin">
-          <?= csrf_field() ?>
-          <input type="hidden" name="action" value="login">
-          <?= field('username', 'Username', 'text', ['value' => $login['username'], 'autocomplete' => 'username', 'required' => true, 'maxlength' => 40, 'nocaps' => true]) ?>
-          <?= field('password', 'Password', 'password', ['autocomplete' => 'current-password', 'required' => true, 'maxlength' => 128]) ?>
-          <div class="actions">
-            <button class="btn btn--primary btn--pill" type="submit">Sign in →</button>
-            <a class="auth-link" href="#access">Forgot your password?</a>
-          </div>
-        </form>
-        <p class="card__foot">Teacher accounts are created by an administrator. Ask your school for your username and temporary password.</p>
-      </section>
-
-      <section class="need-access" id="access" aria-labelledby="access-title">
-        <h2 id="access-title">Need access again?</h2>
-        <p>There is no email reset link. Students: contact your teacher or school administrator and give your username. Teachers: contact your administrator.</p>
-        <p class="muted-sm">After your identity is checked, you will receive a temporary password in person or through your school's approved channel. You must change it at your next sign-in.</p>
-      </section>
+  <!-- Sliding Clay Pill Switcher: Most Common Task (Sign in) First -->
+  <div class="auth-switcher">
+    <div class="pill-tabs" role="tablist" aria-label="Sign in or create student account" data-pill-group="auth">
+      <span class="pill-tabs__slider" aria-hidden="true"></span>
+      <button class="pill-tab" role="tab" type="button" aria-selected="<?= $showRegister ? 'false' : 'true' ?>" data-tab-target="panel-signin">Sign in</button>
+      <button class="pill-tab" role="tab" type="button" aria-selected="<?= $showRegister ? 'true' : 'false' ?>" data-tab-target="panel-register">I'm a new student</button>
     </div>
+  </div>
 
-    <section class="card" id="register" aria-labelledby="register-title">
-      <h2 id="register-title">New student?</h2>
-      <p class="card__intro">Create a student account, then join your class with the code from your teacher.</p>
+  <!-- Panel 1: Returning Sign-In (Students, Teachers & Staff) -->
+  <section class="card" id="panel-signin" aria-labelledby="signin-title"<?= $showRegister ? ' hidden' : '' ?>>
+    <h2 id="signin-title">Sign in to your account</h2>
+    <p class="card__intro">Students, teachers, and school administrators all use this same sign-in.</p>
 
-      <?= error_summary($reg['errors']) ?>
+    <?php if ($login['error'] !== ''): ?>
+      <div class="alert alert--error" role="alert"><?= e($login['error']) ?></div>
+    <?php endif; ?>
 
-      <form method="post" action="/login.php#register">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="register">
-        <div class="row2">
-          <?= field('first_name', 'First name', 'text', ['value' => $reg['first'], 'error' => $reg['errors']['first_name'] ?? '', 'autocomplete' => 'given-name', 'required' => true, 'maxlength' => 60]) ?>
-          <?= field('last_name', 'Last name', 'text', ['value' => $reg['last'], 'error' => $reg['errors']['last_name'] ?? '', 'autocomplete' => 'family-name', 'required' => true, 'maxlength' => 60]) ?>
+    <form method="post" action="/login.php#signin">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="login">
+      <?= field('username', 'Your school username', 'text', [
+          'value' => $login['username'],
+          'placeholder' => 'e.g. maya.santos',
+          'hint' => 'Given to you by your school, or chosen when you signed up.',
+          'autocomplete' => 'username',
+          'required' => true,
+          'maxlength' => 40,
+          'nocaps' => true,
+      ]) ?>
+      <?= field('password', 'Your password', 'password', [
+          'autocomplete' => 'current-password',
+          'required' => true,
+          'maxlength' => 128,
+      ]) ?>
+      <div class="actions actions--full">
+        <button class="btn btn--primary btn--pill" type="submit">
+          <span>Sign in to classroom</span>
+          <span class="btn__arrow" aria-hidden="true">&rarr;</span>
+        </button>
+        <a class="auth-link" href="#access">Forgot your password?</a>
+      </div>
+    </form>
+    <p class="card__foot">New teacher? Your school administrator creates teacher accounts and gives you a starter password.</p>
+  </section>
+
+  <!-- Panel 2: Guided 3-Step Student Sign-Up -->
+  <section class="card" id="panel-register" aria-labelledby="register-title"<?= $showRegister ? '' : ' hidden' ?>>
+    <div id="register"></div>
+    <?= error_summary($reg['errors']) ?>
+
+    <form method="post" action="/login.php#register" data-step-form data-initial-step="<?= $regInitialStep ?>">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="register">
+
+      <div class="step-head">
+        <div class="step-head__row">
+          <span data-step-label>Step 1 of 3 · Your name</span>
+          <span class="step-head__meta" data-step-pct>33%</span>
         </div>
-        <?= field('reg_username', 'Choose a username', 'text', ['value' => $reg['username'], 'error' => $reg['errors']['reg_username'] ?? '', 'hint' => 'Use a unique school username. No email address required.', 'autocomplete' => 'username', 'required' => true, 'maxlength' => 30, 'nocaps' => true]) ?>
-        <div class="row2">
-          <?= field('reg_password', 'Create password', 'password', ['error' => $reg['errors']['reg_password'] ?? '', 'hint' => 'At least 10 characters.', 'autocomplete' => 'new-password', 'required' => true, 'maxlength' => 128]) ?>
-          <?= field('reg_confirm', 'Confirm password', 'password', ['error' => $reg['errors']['reg_confirm'] ?? '', 'autocomplete' => 'new-password', 'required' => true, 'maxlength' => 128]) ?>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" data-step-fill></div>
         </div>
-        <?= field('join_code', 'Class join code', 'text', ['name' => 'join_code', 'value' => $reg['code'], 'error' => $reg['errors']['join_code'] ?? '', 'hint' => 'Optional now. You can join a class after registration.', 'maxlength' => 12, 'nocaps' => true]) ?>
+      </div>
 
-        <p class="privacy">Student privacy: your teacher can see your work in their class. Other students cannot. Administrators manage accounts, not your answers or grades.</p>
+      <!-- Step 1: Real Name -->
+      <div class="form-step is-active" data-step="1" data-step-title="Your name">
+        <h2 id="register-title">First, what's your name?</h2>
+        <p class="card__intro">Use your real name so your teacher recognises you on the class list.</p>
+        <div class="row2">
+          <?= field('first_name', 'First name', 'text', [
+              'value' => $reg['first'],
+              'error' => $reg['errors']['first_name'] ?? '',
+              'placeholder' => 'e.g. Maya',
+              'autocomplete' => 'given-name',
+              'required' => true,
+              'maxlength' => 60,
+          ]) ?>
+          <?= field('last_name', 'Last name', 'text', [
+              'value' => $reg['last'],
+              'error' => $reg['errors']['last_name'] ?? '',
+              'placeholder' => 'e.g. Santos',
+              'autocomplete' => 'family-name',
+              'required' => true,
+              'maxlength' => 60,
+          ]) ?>
+        </div>
+        <div class="step-nav step-nav--end">
+          <button class="btn btn--primary btn--pill" type="button" data-goto-step="2">
+            <span>Next: Pick a login</span>
+            <span class="btn__arrow" aria-hidden="true">&rarr;</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Username & Password -->
+      <div class="form-step" data-step="2" data-step-title="Pick your login">
+        <h2>Choose your username &amp; password</h2>
+        <p class="card__intro">No email address is needed—just choose a username and password you will remember.</p>
+        <?= field('reg_username', 'Pick a username', 'text', [
+            'value' => $reg['username'],
+            'error' => $reg['errors']['reg_username'] ?? '',
+            'placeholder' => 'e.g. maya.santos',
+            'hint' => '3 to 30 letters, numbers, or dots.',
+            'autocomplete' => 'username',
+            'required' => true,
+            'maxlength' => 30,
+            'nocaps' => true,
+        ]) ?>
+        <div class="row2">
+          <?= field('reg_password', 'Create a password', 'password', [
+              'error' => $reg['errors']['reg_password'] ?? '',
+              'autocomplete' => 'new-password',
+              'required' => true,
+              'maxlength' => 128,
+          ]) ?>
+          <?= field('reg_confirm', 'Type password again', 'password', [
+              'error' => $reg['errors']['reg_confirm'] ?? '',
+              'autocomplete' => 'new-password',
+              'required' => true,
+              'maxlength' => 128,
+          ]) ?>
+        </div>
+        <div class="pw-rules" aria-live="polite">
+          <span class="pw-chip" id="pw-chip-len">○ At least 10 characters</span>
+          <span class="pw-chip" id="pw-chip-match">○ Both passwords match</span>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn--quiet" type="button" data-goto-step="1">&larr; Back</button>
+          <button class="btn btn--primary btn--pill" type="button" data-goto-step="3">
+            <span>Next: Join your class</span>
+            <span class="btn__arrow" aria-hidden="true">&rarr;</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Optional Class Code & Plain-Language Privacy -->
+      <div class="form-step" data-step="3" data-step-title="Join your class">
+        <h2>Join your class</h2>
+        <p class="card__intro">Enter the short code from your teacher, or leave it blank and join later.</p>
+        <?= field('join_code', 'Class code (optional)', 'text', [
+            'name' => 'join_code',
+            'value' => $reg['code'],
+            'error' => $reg['errors']['join_code'] ?? '',
+            'placeholder' => 'e.g. NET-4829',
+            'hint' => 'You can also join more classes anytime from your home screen.',
+            'maxlength' => 12,
+            'nocaps' => true,
+        ]) ?>
+
+        <div class="privacy-well">
+          <strong>Your privacy in plain words:</strong> Only your class teacher sees your quiz answers and scores. Other students cannot see your work, and school administrators only manage accounts.
+        </div>
+
         <div class="field">
           <label class="check" for="privacy">
             <input type="checkbox" id="privacy" name="privacy" value="1"<?= $reg['privacy'] ? ' checked' : '' ?><?= isset($reg['errors']['privacy']) ? ' aria-invalid="true"' : '' ?>>
-            <span>I have read the student privacy notice.</span>
+            <span>I have read and understood how my class work is shared.</span>
           </label>
           <?php if (isset($reg['errors']['privacy'])): ?><p class="field__error"><?= e($reg['errors']['privacy']) ?></p><?php endif; ?>
         </div>
-        <button class="btn btn--primary btn--pill" type="submit">Create student account</button>
-      </form>
-    </section>
-  </div>
 
-  <p class="auth-foot">QUIVER · School-managed access · Keep your password private.</p>
+        <div class="step-nav">
+          <button class="btn btn--quiet" type="button" data-goto-step="2">&larr; Back</button>
+          <button class="btn btn--primary btn--pill" type="submit">
+            <span>Create student account</span>
+            <span class="btn__arrow" aria-hidden="true">&rarr;</span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <!-- Friendly Help Box for Stuck Users -->
+  <aside class="help-box" id="access" aria-labelledby="access-title">
+    <span class="help-box__icon" aria-hidden="true">?</span>
+    <div>
+      <h3 id="access-title">Forgot your password or locked out?</h3>
+      <p>For student safety, QUIVER does not send password reset links by email. Tell your <strong>teacher</strong> or <strong>school administrator</strong> your username—after checking who you are, they will give you a one-time starter password in person so you can choose a new one.</p>
+    </div>
+  </aside>
+
+  <p class="auth-foot">QUIVER · Keep your password private.</p>
 </main>
 </body></html>

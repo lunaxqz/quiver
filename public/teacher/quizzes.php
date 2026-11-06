@@ -222,7 +222,7 @@ teacher_start(
                 <button class="linklike action-sub" type="submit">Duplicate as new version</button>
               </form>
             <?php else: ?>
-              <a class="action-main" href="/teacher/grading.php?quiz_id=<?= (int) $r['id'] ?>">Review &amp; release →</a>
+              <a class="action-main" href="/teacher/reports.php?quiz_id=<?= (int) $r['id'] ?>">Review &amp; release →</a>
               <form class="inline-form" method="post" action="/teacher/quizzes.php">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="duplicate">

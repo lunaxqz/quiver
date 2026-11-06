@@ -54,6 +54,9 @@ if ($r['score_released'] && $r['review_released']) {
     }
 }
 
+$effectiveAttemptNo = (int) ($r['effective_attempt_no'] ?? $attemptNo);
+$attemptScore       = $r['attempt_score'] ?? $r['score'];
+
 $fmtNum = static function (float $v): string {
     return rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
 };
@@ -95,25 +98,38 @@ student_start($title, $classLabel, true, ['/assets/css/student.css', '/assets/cs
     </div>
   </section>
 
-  <?php if ($r['score_released']): ?>
+  <?php if ($r['score_released'] || $r['review_released']): ?>
     <div class="rcpt-divider">
-      <span>RELEASED RESULT · YOUR SCORE</span>
+      <span>LATER · AFTER YOUR TEACHER RELEASES SCORES</span>
     </div>
 
     <section class="att-card rcpt-card rcpt-score-card" aria-labelledby="score-heading">
       <div class="rcpt-card__top">
-        <?= status_mark('complete', 'Score released') ?>
-        <?php if ($r['score_released_manila'] !== ''): ?>
+        <?php if ($r['score_released']): ?>
+          <?= status_mark('complete', 'Score released') ?>
+        <?php else: ?>
+          <?= status_mark('neutral', 'Score not released') ?>
+        <?php endif; ?>
+        <?php if ($r['score_released'] && $r['score_released_manila'] !== ''): ?>
           <span class="rcpt-released-at"><?= e($r['score_released_manila']) ?> · Asia/Manila</span>
+        <?php elseif ($r['review_released'] && $r['review_released_manila'] !== ''): ?>
+          <span class="rcpt-released-at"><?= e($r['review_released_manila']) ?> · Asia/Manila</span>
         <?php endif; ?>
       </div>
 
       <div class="rcpt-score-row">
         <div class="rcpt-score-figure">
-          <div class="rcpt-score-num">
-            <?= e($fmtNum((float) $r['score'])) ?> <span class="rcpt-score-slash">/</span> <?= e($fmtNum((float) $r['total_points'])) ?>
-          </div>
-          <span class="rcpt-sub"><?= (int) $r['percentage'] ?>% · Your final score</span>
+          <?php if ($r['score_released'] && $r['score'] !== null): ?>
+            <div class="rcpt-score-num">
+              <?= e($fmtNum((float) $r['score'])) ?> <span class="rcpt-score-slash">/</span> <?= e($fmtNum((float) $r['total_points'])) ?>
+            </div>
+            <span class="rcpt-sub">
+              <?= (int) $r['percentage'] ?>% · Your final score<?php if ($maxAttempts > 1 && $effectiveAttemptNo !== $attemptNo && $attemptScore !== null): ?> (this attempt: <?= e($fmtNum((float) $attemptScore)) ?> / <?= e($fmtNum((float) $r['total_points'])) ?>)<?php endif; ?>
+            </span>
+          <?php else: ?>
+            <div class="rcpt-score-num">— <span class="rcpt-score-slash">/</span> <?= e($fmtNum((float) $r['total_points'])) ?></div>
+            <span class="rcpt-sub">Total score private</span>
+          <?php endif; ?>
         </div>
 
         <div class="rcpt-score-meta">
@@ -135,7 +151,7 @@ student_start($title, $classLabel, true, ['/assets/css/student.css', '/assets/cs
 
       <?php if (!$r['review_released']): ?>
         <p class="rcpt-note">
-          Your score is available, but questions, submitted answers, correct answers and feedback remain private until <?= e($r['teacher_name']) ?> releases answer review.
+          Your score is available, but questions, submitted answers, correct answers and feedback remain private until <?= e($r['teacher_name']) ?> releases answer review.<?= ($r['review_release_mode'] === 'scheduled' && $r['release_at_manila'] !== '') ? ' Expected: ' . e($r['release_at_manila']) . '.' : '' ?>
         </p>
         <div>
           <button type="button" class="btn btn--pill rcpt-btn-disabled" disabled>View answer review · Not yet available</button>

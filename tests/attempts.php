@@ -333,11 +333,129 @@ try {
         && $overrideRes['is_overridden'] === true
         && $overrideRes['attempt_score'] === 3.00);
 
+    // ---------------------------------------------------------------- Day 16: ReportService, independent release controls, retake score policy & safe CSV export
+    check('teacher B cannot view or export teacher A\'s quiz report (returns null)',
+        ReportService::reportForQuiz($open, $teacherB) === null
+        && ReportService::exportCsv($open, $teacherB) === null
+        && ReportService::updateRelease($open, $teacherB, 'release_scores')['result'] === 'not_found');
+
+    // Before release: student sees neither score nor answer review
+    $rcptBefore = AttemptService::receipt($attId, $student);
+    check('before release, student receipt hides both score and answer review',
+        $rcptBefore !== null
+        && $rcptBefore['score_released'] === false
+        && $rcptBefore['score'] === null
+        && $rcptBefore['review_released'] === false
+        && $rcptBefore['review_items'] === []);
+
+    // Release scores ONLY (answer review stays private)
+    $relScoreRes = ReportService::updateRelease($open, $teacher, 'release_scores');
+    $rcptScoreOnly = AttemptService::receipt($attId, $student);
+    check('releasing scores reveals student score (3.00 / 8.00) while keeping answer review private',
+        $relScoreRes['result'] === 'ok'
+        && $rcptScoreOnly !== null
+        && $rcptScoreOnly['score_released'] === true
+        && $rcptScoreOnly['score'] === 3.00
+        && $rcptScoreOnly['percentage'] === 38
+        && $rcptScoreOnly['review_released'] === false
+        && $rcptScoreOnly['review_items'] === []);
+
+    // Release answer review separately
+    $relRevRes = ReportService::updateRelease($open, $teacher, 'release_review');
+    $rcptBoth = AttemptService::receipt($attId, $student);
+    check('releasing answer review reveals questions, student answers, correct keys, and teacher feedback',
+        $relRevRes['result'] === 'ok'
+        && $rcptBoth !== null
+        && $rcptBoth['score_released'] === true
+        && $rcptBoth['review_released'] === true
+        && count($rcptBoth['review_items']) === 4
+        && $rcptBoth['review_items'][0]['feedback'] === 'Partial credit override.');
+
+    // Hold scores again (while answer review stays released) -> independent toggle works in both directions
+    ReportService::updateRelease($open, $teacher, 'hold_scores');
+    $rcptRevOnly = AttemptService::receipt($attId, $student);
+    check('holding scores hides the total score again while leaving answer review released',
+        $rcptRevOnly !== null
+        && $rcptRevOnly['score_released'] === false
+        && $rcptRevOnly['score'] === null
+        && $rcptRevOnly['review_released'] === true);
+    ReportService::updateRelease($open, $teacher, 'release_scores');
+
+    // Retake score policy check (highest vs latest) + class statistics (mean, median, range)
+    $policyQuiz = $mkQuiz($classId, $teacher, -60, 60, 20, 3);
+    $pq1 = $addQuestion($policyQuiz, 1, 'single', 'Q1', null, [['A', true], ['B', false]]);
+    $pq2 = $addQuestion($policyQuiz, 2, 'single', 'Q2', null, [['C', true], ['D', false]]);
+    // Student 1 ($student): Attempt 1 scores 4.00, Attempt 2 scores 2.00
+    $s1a1 = (int) AttemptService::start($student, $policyQuiz)['attempt_id'];
+    $p1Payload = AttemptService::payload($s1a1, $student);
+    $optA = (int) $p1Payload['questions'][0]['options'][0]['id'];
+    $optB = (int) $p1Payload['questions'][0]['options'][1]['id'];
+    $optC = (int) $p1Payload['questions'][1]['options'][0]['id'];
+    AttemptService::submit($s1a1, $student, [
+        $pq1 => ['option_ids' => [$optA], 'revision' => 1],
+        $pq2 => ['option_ids' => [$optC], 'revision' => 1],
+    ]);
+    $s1a2 = (int) AttemptService::start($student, $policyQuiz)['attempt_id'];
+    AttemptService::submit($s1a2, $student, [
+        $pq1 => ['option_ids' => [$optA], 'revision' => 1],
+        $pq2 => ['option_ids' => [$optB], 'revision' => 1],
+    ]);
+    // Student 2 ($racer): Attempt 1 scores 2.00
+    $s2a1 = (int) AttemptService::start($racer, $policyQuiz)['attempt_id'];
+    AttemptService::submit($s2a1, $racer, [
+        $pq1 => ['option_ids' => [$optA], 'revision' => 1],
+        $pq2 => ['option_ids' => [$optB], 'revision' => 1],
+    ]);
+    ReportService::updateRelease($policyQuiz, $teacher, 'release_scores');
+
+    // Default policy is 'highest': student 1 gets 4.00, racer gets 2.00 -> mean = 3.0, median = 3.0, range = 2..4
+    $repHighest = ReportService::reportForQuiz($policyQuiz, $teacher);
+    $rcptHighest = AttemptService::receipt($s1a2, $student);
+    check('highest-score policy picks student\'s 4.00 attempt over later 2.00 attempt in both report and student result',
+        $repHighest !== null
+        && $repHighest['stats']['mean'] === 3.0
+        && $repHighest['stats']['median'] === 3.0
+        && $repHighest['stats']['min'] === 2.0
+        && $repHighest['stats']['max'] === 4.0
+        && $rcptHighest !== null
+        && $rcptHighest['score'] === 4.0
+        && $rcptHighest['attempt_score'] === 2.0);
+
+    // Switch quiz to 'latest' policy: student 1 now gets 2.00, racer gets 2.00 -> mean = 2.0, median = 2.0, range = 2..2
+    $pdo->prepare("UPDATE quizzes SET score_policy = 'latest' WHERE id = ?")->execute([$policyQuiz]);
+    $repLatest = ReportService::reportForQuiz($policyQuiz, $teacher);
+    $rcptLatest = AttemptService::receipt($s1a2, $student);
+    check('latest-score policy picks student\'s latest 2.00 attempt in both report and student result',
+        $repLatest !== null
+        && $repLatest['stats']['mean'] === 2.0
+        && $repLatest['stats']['median'] === 2.0
+        && $repLatest['stats']['min'] === 2.0
+        && $repLatest['stats']['max'] === 2.0
+        && $rcptLatest !== null
+        && $rcptLatest['score'] === 2.0);
+
+    // CSV export: verify UTF-8 BOM and formula injection sanitization (=, +, -, @)
+    check('sanitizeCsvCell prefixes single quote on =, +, -, @ formula triggers',
+        ReportService::sanitizeCsvCell('=cmd|"/c calc"!A0') === "'=cmd|\"/c calc\"!A0"
+        && ReportService::sanitizeCsvCell('+SUM(A1:A2)') === "'+SUM(A1:A2)"
+        && ReportService::sanitizeCsvCell('-10+20') === "'-10+20"
+        && ReportService::sanitizeCsvCell('@AVERAGE(A1)') === "'@AVERAGE(A1)"
+        && ReportService::sanitizeCsvCell('  =1+1') === "'  =1+1"
+        && ReportService::sanitizeCsvCell('Aguilar, Bea') === 'Aguilar, Bea');
+
+    $pdo->prepare('UPDATE users SET full_name = ? WHERE id = ?')->execute(['=HYPERLINK("http://evil.tld")', $racer]);
+    $csvOut = ReportService::exportCsv($policyQuiz, $teacher);
+    $pdo->prepare('UPDATE users SET full_name = ? WHERE id = ?')->execute(['Test s3', $racer]);
+    check('CSV export starts with UTF-8 BOM and neutralizes formula injection in student records',
+        $csvOut !== null
+        && str_starts_with($csvOut['content'], "\xEF\xBB\xBF")
+        && str_contains($csvOut['content'], "'=HYPERLINK"));
+
     // ---------------------------------------------------------------- attempt limit
     check('after submitting the only attempt, a new one is refused', AttemptService::start($student, $open)['result'] === 'limit');
     $home = AttemptService::homeForStudent($student);
     check('student home lists the quiz under the class with 1 of 1 used',
-        count($home) === 1 && count($home[0]['quizzes']) === 2 && $home[0]['quizzes'][0]['attempts_used'] === 1 && !$home[0]['quizzes'][0]['can_start']);
+        count($home) === 1 && count($home[0]['quizzes']) === 3 && $home[0]['quizzes'][0]['attempts_used'] === 1 && !$home[0]['quizzes'][0]['can_start']);
 
     // ---------------------------------------------------------------- not open / empty / unpublished
     $later = $mkQuiz($classId, $teacher, 60, 120, 30, 1);
@@ -347,7 +465,7 @@ try {
     $closed = $mkQuiz($classId, $teacher, -120, -60, 30, 1);
     $addQuestion($closed, 1, 'single', 'Q?', null, [['a', true], ['b', false]]);
     check('a closed quiz cannot be started', AttemptService::start($student, $closed)['result'] === 'not_open');
-    check('a closed quiz with no student attempts is left off student home', count(AttemptService::homeForStudent($student)[0]['quizzes']) === 3);
+    check('a closed quiz with no student attempts is left off student home', count(AttemptService::homeForStudent($student)[0]['quizzes']) === 4);
 
     $empty = $mkQuiz($classId, $teacher, -60, 60, 30, 1);
     check('a quiz with no questions cannot be started', AttemptService::start($student, $empty)['result'] === 'empty');

@@ -75,6 +75,7 @@ $statusMarkHtml = '<div class="grading-head-right" id="hdr-status-mark">'
     . ($pendingCount > 0
         ? status_mark('attention', 'Needs grading')
         : status_mark('complete', 'All graded'))
+    . ' <a class="btn btn--pill btn--sm" href="/teacher/reports.php?quiz_id=' . (int) $quizMeta['id'] . '">Review &amp; release &rarr;</a>'
     . '</div>';
 
 teacher_start(

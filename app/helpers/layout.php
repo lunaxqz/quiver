@@ -75,6 +75,7 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
             'bank'     => ['Question bank', '/teacher/bank.php'],
             'quizzes'  => ['Quizzes',       '/teacher/quizzes.php'],
             'grading'  => ['Grading',       '/teacher/grading.php'],
+            'reports'  => ['Reports',       '/teacher/reports.php'],
         ];
     $who = _who();
     $roleLabel = $who['role'] !== '' ? ucfirst((string) $who['role']) : '';

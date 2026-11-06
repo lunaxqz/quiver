@@ -80,6 +80,21 @@ final class QuizService
         $rStmt->execute([$classId]);
         $row['roster_count'] = (int) $rStmt->fetchColumn();
 
+        // Pending written responses count (for 'Grade · N pending →' link)
+        $pStmt = db()->prepare(
+            "SELECT COUNT(*)
+               FROM responses r
+               JOIN quiz_attempts a ON a.id = r.attempt_id
+               JOIN quiz_questions qq ON qq.id = r.quiz_question_id
+              WHERE a.quiz_id = ?
+                AND a.status IN ('submitted', 'graded')
+                AND qq.type IN ('short', 'essay')
+                AND r.points_awarded IS NULL
+                AND TRIM(COALESCE(r.answer_text, '')) <> ''"
+        );
+        $pStmt->execute([$id]);
+        $row['pending_written_count'] = (int) $pStmt->fetchColumn();
+
         // Question count and points
         $qStmt = db()->prepare('SELECT COUNT(*), COALESCE(SUM(points), 0) FROM quiz_questions WHERE quiz_id = ?');
         $qStmt->execute([$id]);

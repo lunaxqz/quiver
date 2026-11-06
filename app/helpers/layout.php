@@ -74,15 +74,27 @@ function teacher_start(string $title, string $active = '', string $role = 'teach
             'classes'  => ['Classes',       '/teacher/classes.php'],
             'bank'     => ['Question bank', '/teacher/bank.php'],
             'quizzes'  => ['Quizzes',       '/teacher/quizzes.php'],
+            'grading'  => ['Grading',       '/teacher/grading.php'],
         ];
     $who = _who();
     $roleLabel = $who['role'] !== '' ? ucfirst((string) $who['role']) : '';
+    $gradingBadge = 0;
+    if ($role === 'teacher' && isset($who['id']) && (int) $who['id'] > 0 && class_exists('GradingService')) {
+        try {
+            $gradingBadge = GradingService::pendingCountForTeacher((int) $who['id']);
+        } catch (Throwable) {
+            $gradingBadge = 0;
+        }
+    }
 
     echo '<div class="t-shell"><aside class="t-rail">'
        . '<a class="t-brand" href="/">QUIVER</a><nav class="t-nav" aria-label="Main">';
     foreach ($links as $key => [$label, $href]) {
         $cur = $key === $active ? ' aria-current="page"' : '';
-        echo '<a href="' . $href . '"' . $cur . '>' . $label . '</a>';
+        $badgeHtml = ($key === 'grading' && $gradingBadge > 0)
+            ? ' <span class="t-nav__badge" id="nav-grading-badge">' . $gradingBadge . '</span>'
+            : '';
+        echo '<a href="' . $href . '"' . $cur . '><span>' . $label . '</span>' . $badgeHtml . '</a>';
     }
     echo '</nav><div class="t-user"><strong>' . htmlspecialchars((string) $who['full_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong><br>'
        . $roleLabel . ($roleLabel !== '' ? ' · ' : '') . _signout_form()

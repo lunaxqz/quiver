@@ -213,8 +213,16 @@ teacher_start(
                 <input type="hidden" name="quiz_id" value="<?= (int) $r['id'] ?>">
                 <button class="linklike action-sub" type="submit">Duplicate as new version</button>
               </form>
+            <?php elseif (($r['pending_written_count'] ?? 0) > 0): ?>
+              <a class="action-main" href="/teacher/grading.php?quiz_id=<?= (int) $r['id'] ?>">Grade · <?= (int) $r['pending_written_count'] ?> pending →</a>
+              <form class="inline-form" method="post" action="/teacher/quizzes.php">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="duplicate">
+                <input type="hidden" name="quiz_id" value="<?= (int) $r['id'] ?>">
+                <button class="linklike action-sub" type="submit">Duplicate as new version</button>
+              </form>
             <?php else: ?>
-              <a class="action-main" href="/teacher/quiz.php?id=<?= (int) $r['id'] ?>">Review &amp; release →</a>
+              <a class="action-main" href="/teacher/grading.php?quiz_id=<?= (int) $r['id'] ?>">Review &amp; release →</a>
               <form class="inline-form" method="post" action="/teacher/quizzes.php">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="duplicate">

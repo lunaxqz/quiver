@@ -5,7 +5,8 @@
 .t-rail { border-right:1px solid var(--line); padding:var(--s5) var(--s4); display:flex; flex-direction:column; gap:var(--s5); }
 .t-brand { font-weight:700; letter-spacing:.12em; font-size:var(--t-lg); text-decoration:none; }
 .t-nav { display:flex; flex-direction:column; gap:var(--s1); }
-.t-nav a { padding:var(--s2) var(--s3); border-radius:var(--r-control); text-decoration:none; color:var(--ink-2); }
+.t-nav a { padding:var(--s2) var(--s3); border-radius:var(--r-control); text-decoration:none; color:var(--ink-2); display:flex; align-items:center; justify-content:space-between; gap:var(--s2); }
+.t-nav__badge { display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:20px; padding:0 7px; border-radius:999px; background:var(--ink); color:var(--paper); font-size:12px; font-weight:600; line-height:1; }
 .t-nav a:hover { color:var(--ink); background:rgba(27,26,23,.05); }
 .t-nav a[aria-current='page'] { color:var(--ink); font-weight:600; background:rgba(27,26,23,.07); }
 .t-user { margin-top:auto; font-size:var(--t-sm); color:var(--ink-2); }

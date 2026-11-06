@@ -43,6 +43,7 @@ $addQuestion = static function (int $quizId, int $pos, string $type, string $pro
 
 try {
     $teacher  = $mkUser('t', 'teacher');
+    $teacherB = $mkUser('tb', 'teacher');
     $student  = $mkUser('s1', 'student');
     $outsider = $mkUser('s2', 'student');
     $racer    = $mkUser('s3', 'student');
@@ -274,6 +275,64 @@ try {
         && $sweptRow['submitted_at'] === $pastDeadline
         && (float) $sweptRow['score'] === 4.0);
 
+    // ---------------------------------------------------------------- Day 15: GradingService, grade_events, undo & auto-grade override
+    check('teacher B cannot open teacher A\'s grading workspace (returns null / 404)',
+        GradingService::workspace($open, $teacherB) === null);
+
+    $ws = GradingService::workspace($open, $teacher);
+    check('teacher A loads grading workspace with 1 pending written response in stack',
+        $ws !== null
+        && $ws['quiz']['pending_written_count'] === 1
+        && count($ws['stack_items']) === 1
+        && $ws['stack_items'][0]['question_id'] === $qShortId
+        && $ws['stack_items'][0]['is_pending'] === true);
+
+    $shortRespId  = (int) $ws['stack_items'][0]['response_id'];
+    $singleRespId = (int) $pdo->query('SELECT id FROM responses WHERE attempt_id = ' . $attId . ' AND quiz_question_id = ' . $qSingleId)->fetchColumn();
+
+    check('teacher B cannot grade teacher A\'s student response (returns not_found)',
+        GradingService::gradeResponse($shortRespId, $teacherB, 2.0, 'Hijack')['result'] === 'not_found');
+
+    check('points outside 0..max_points are rejected',
+        GradingService::gradeResponse($shortRespId, $teacher, 5.0)['result'] === 'invalid_points'
+        && GradingService::gradeResponse($shortRespId, $teacher, -1.0)['result'] === 'invalid_points');
+
+    // Grade the pending short answer with 1.50 / 2.00 points -> attempt has no remaining ungraded written items, so status flips to 'graded' and score becomes 2.00 + 1.50 = 3.50
+    $g1 = GradingService::gradeResponse($shortRespId, $teacher, 1.50, 'Good answer, minor detail missing.');
+    $evCount1 = (int) $pdo->query('SELECT COUNT(*) FROM grade_events WHERE response_id = ' . $shortRespId)->fetchColumn();
+    check('grading pending written response updates attempt status to graded, recomputes score (3.50), and inserts grade_events row',
+        $g1['result'] === 'ok'
+        && $g1['points_awarded'] === 1.50
+        && $g1['attempt_status'] === 'graded'
+        && $g1['attempt_score'] === 3.50
+        && $g1['pending_written_count'] === 0
+        && $evCount1 === 1);
+
+    // Undo the mark on the short answer (restoring to null / pending) -> inserts a 2nd grade_events row (never deletes!) and reverts attempt status to 'submitted'
+    check('teacher B cannot undo teacher A\'s mark',
+        GradingService::undoResponse($shortRespId, $teacherB, null, null)['result'] === 'not_found');
+
+    $u1 = GradingService::undoResponse($shortRespId, $teacher, null, null);
+    $evCount2 = (int) $pdo->query('SELECT COUNT(*) FROM grade_events WHERE response_id = ' . $shortRespId)->fetchColumn();
+    check('undoing mark appends a 2nd grade_events row (never deletes) and reverts response to pending and attempt status to submitted',
+        $u1['result'] === 'ok'
+        && $u1['points_awarded'] === null
+        && $u1['is_pending'] === true
+        && $u1['attempt_status'] === 'submitted'
+        && $u1['attempt_score'] === 2.00
+        && $u1['pending_written_count'] === 1
+        && $evCount2 === 2);
+
+    // Re-grade short answer with full 2.00 points, then override auto-graded single-choice question from 2.00 to 1.00
+    GradingService::gradeResponse($shortRespId, $teacher, 2.00, 'Full credit on second look.');
+    $overrideRes = GradingService::gradeResponse($singleRespId, $teacher, 1.00, 'Partial credit override.');
+    check('overriding an auto-graded objective item preserves auto_points (2.00), sets points_awarded (1.00), and recomputes attempt score (3.00)',
+        $overrideRes['result'] === 'ok'
+        && $overrideRes['auto_points'] === 2.00
+        && $overrideRes['points_awarded'] === 1.00
+        && $overrideRes['is_overridden'] === true
+        && $overrideRes['attempt_score'] === 3.00);
+
     // ---------------------------------------------------------------- attempt limit
     check('after submitting the only attempt, a new one is refused', AttemptService::start($student, $open)['result'] === 'limit');
     $home = AttemptService::homeForStudent($student);
@@ -331,6 +390,7 @@ try {
     $u = $in($ids['users']);
     $c = $in($ids['classes']);
     $qz = $in(array_merge($ids['quizzes'], $pdo->query('SELECT id FROM quizzes WHERE class_id IN (' . $c . ')')->fetchAll(PDO::FETCH_COLUMN)));
+    $pdo->exec('DELETE FROM grade_events WHERE response_id IN (SELECT id FROM responses WHERE attempt_id IN (SELECT id FROM quiz_attempts WHERE quiz_id IN (' . $qz . ')))');
     $pdo->exec('DELETE FROM response_options WHERE response_id IN (SELECT id FROM responses WHERE attempt_id IN (SELECT id FROM quiz_attempts WHERE quiz_id IN (' . $qz . ')))');
     $pdo->exec('DELETE FROM responses WHERE attempt_id IN (SELECT id FROM quiz_attempts WHERE quiz_id IN (' . $qz . '))');
     $pdo->exec('DELETE FROM quiz_attempts WHERE quiz_id IN (' . $qz . ')');

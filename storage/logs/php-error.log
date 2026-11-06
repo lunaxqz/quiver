@@ -24,3 +24,5 @@ Stack trace:
   thrown in C:\quiver\tests\authz.php on line 29
 [06-Nov-2026 05:35:10 UTC] PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`quiver`.`quizzes`, CONSTRAINT `quizzes_ibfk_3` FOREIGN KEY (`previous_version_id`) REFERENCES `quizzes` (`id`)) in C:\quiver\tests\authz.php:192
 [06-Nov-2026 06:04:20 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19
+[06-Nov-2026 07:33:52 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19
+[06-Nov-2026 07:38:24 UTC] PHP Warning:  Undefined array key "id" in C:\quiver\tests\attempts.php on line 291

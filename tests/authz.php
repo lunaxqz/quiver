@@ -8,11 +8,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../app/bootstrap.php';
 
-function check(string $label, bool $ok): void
-{
-    echo ($ok ? '  [PASS] ' : '  [FAIL] ') . $label . "\n";
-    if (!$ok) {
-        throw new RuntimeException("Check failed: {$label}");
+if (!function_exists('check')) {
+    function check(string $label, bool $ok): void
+    {
+        echo ($ok ? '  [PASS] ' : '  [FAIL] ') . $label . "\n";
+        if (!$ok) {
+            throw new RuntimeException("Check failed: {$label}");
+        }
     }
 }
 

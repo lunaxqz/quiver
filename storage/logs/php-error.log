@@ -10,3 +10,17 @@
 [05-Nov-2026 10:29:20 UTC] TypeError: e(): Argument #1 ($value) must be of type ?string, int given, called in C:\quiver\public\teacher\quizzes.php on line 83 in C:\quiver\app\core\http.php:5
 [05-Nov-2026 20:53:35 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19
 [05-Nov-2026 20:53:45 UTC] PDOException: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it in C:\quiver\app\core\db.php:19
+[05-Nov-2026 22:03:48 UTC] PHP Fatal error:  Cannot redeclare check() (previously declared in C:\quiver\tests\run.php:28) in C:\quiver\tests\authz.php on line 11
+[05-Nov-2026 22:04:25 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19
+[05-Nov-2026 22:05:16 UTC] PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'updated_at' in 'INSERT INTO' in C:\quiver\tests\authz.php:29
+[06-Nov-2026 05:33:45 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19
+[06-Nov-2026 05:34:12 UTC] PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'updated_at' in 'INSERT INTO' in C:\quiver\tests\authz.php:29
+[06-Nov-2026 05:34:35 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'updated_at' in 'INSERT INTO' in C:\quiver\tests\authz.php:29
+Stack trace:
+#0 C:\quiver\tests\authz.php(29): PDO->prepare('INSERT INTO use...')
+#1 C:\quiver\tests\run.php(40): require('C:\\quiver\\tests...')
+#2 Command line code(1): require('C:\\quiver\\tests...')
+#3 {main}
+  thrown in C:\quiver\tests\authz.php on line 29
+[06-Nov-2026 05:35:10 UTC] PDOException: SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`quiver`.`quizzes`, CONSTRAINT `quizzes_ibfk_3` FOREIGN KEY (`previous_version_id`) REFERENCES `quizzes` (`id`)) in C:\quiver\tests\authz.php:192
+[06-Nov-2026 06:04:20 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19

@@ -1,5 +1,5 @@
 /**
- * QUIVER Student Attempt Screen (Day 12 & Day 13).
+ * QUIVER Student Attempt Screen (Day 12, Day 13 & Day 14).
  *
  * Responsibilities:
  *  1. One question per screen, rendered into #att-fieldset with a serif <legend> and >=48px option rows.
@@ -13,13 +13,17 @@
  *      - Resyncs from the server's /api/timer.php on visibilitychange/focus and via window.quiverTimer.resync(seconds)
  *        so every API response (including Day 13 autosave) keeps the timer locked to server time.
  *      - Announces via polite live region at 10 minutes, 5 minutes, and 1 minute remaining.
- *      - Color shift & "Final minute" label at <= 60 seconds.
+ *      - Color shift & "Final minute" label at <= 60 seconds; auto-submits at 00:00.
  *  5. Offline-resilient Autosave & 20s Heartbeat (Day 13):
  *      - Answers mirrored in sessionStorage with monotonic revision counter per question.
  *      - Queue sends any answer whose local revision > ackedRevision to /api/autosave.php.
  *      - Exponential backoff retry on network/5xx failure: 1s, 2s, 4s, 8s, capped at 15s; immediate flush on `online`.
  *      - 20-second heartbeat keeps `last_seen_at` fresh even while the student is reading a long prompt.
- *      - Honest save indicator (#att-saved) never reports "Saved" until confirmed by the server.
+ *      - Honest save indicator (#att-saved & #rev-saved) never reports "Saved" until confirmed by the server.
+ *  6. Review & Submit (Day 14):
+ *      - Single "Review answers" action on the last question (center button hidden on last question so there are never two Review answers buttons).
+ *      - Full "Review your attempt" summary screen listing every question's Answered / Unanswered status, jump-to-question links,
+ *        unanswered warning copy, confirmation checkbox, and idempotent POST to /api/submit.php redirecting to /student/receipt.php.
  */
 (function () {
   'use strict';
@@ -92,6 +96,13 @@
     } catch (e) {}
   }
 
+  function clearLocalDraft() {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(INDEX_KEY);
+    } catch (e) {}
+  }
+
   function isQuestionAnswered(q) {
     var a = answers[q.id];
     if (!a) return false;
@@ -109,23 +120,52 @@
     return n;
   }
 
+  function getUnansweredNumbers() {
+    var nums = [];
+    for (var i = 0; i < total; i++) {
+      if (!isQuestionAnswered(questions[i])) {
+        nums.push(i + 1);
+      }
+    }
+    return nums;
+  }
+
   // ---- DOM references ----
-  var summaryEl   = document.getElementById('att-summary');
-  var dotsEl      = document.getElementById('att-dots');
-  var typeEl      = document.getElementById('att-type');
-  var pointsEl    = document.getElementById('att-points');
-  var promptEl    = document.getElementById('att-prompt');
-  var optionsEl   = document.getElementById('att-options');
-  var prevBtn     = document.getElementById('att-prev');
-  var nextBtn     = document.getElementById('att-next');
-  var reviewBtn   = document.getElementById('att-review');
-  var timerBox    = document.getElementById('att-timer-box');
-  var timerLabel  = document.getElementById('att-timer-label');
-  var timerDigits = document.getElementById('att-timer-digits');
-  var timerLive   = document.getElementById('att-timer-live');
-  var savedBox    = document.getElementById('att-saved');
-  var savedText   = document.getElementById('att-saved-text');
-  var savedCheck  = savedBox ? savedBox.querySelector('.att-saved__check') : null;
+  var questionViewEl     = document.getElementById('att-question-view');
+  var reviewViewEl       = document.getElementById('att-review-view');
+  var summaryEl          = document.getElementById('att-summary');
+  var dotsEl             = document.getElementById('att-dots');
+  var typeEl             = document.getElementById('att-type');
+  var pointsEl           = document.getElementById('att-points');
+  var promptEl           = document.getElementById('att-prompt');
+  var optionsEl          = document.getElementById('att-options');
+  var prevBtn            = document.getElementById('att-prev');
+  var nextBtn            = document.getElementById('att-next');
+  var reviewBtn          = document.getElementById('att-review');
+  var timerBox           = document.getElementById('att-timer-box');
+  var timerLabel         = document.getElementById('att-timer-label');
+  var timerDigits        = document.getElementById('att-timer-digits');
+  var timerLive          = document.getElementById('att-timer-live');
+  var savedBox           = document.getElementById('att-saved');
+  var savedText          = document.getElementById('att-saved-text');
+  var savedCheck         = savedBox ? savedBox.querySelector('.att-saved__check') : null;
+
+  // Review view DOM references
+  var revAnsweredCount   = document.getElementById('rev-answered-count');
+  var revUnansweredCount = document.getElementById('rev-unanswered-count');
+  var revTimerDigits     = document.getElementById('rev-timer-digits');
+  var revGrid            = document.getElementById('rev-grid');
+  var revSavedBox        = document.getElementById('rev-saved');
+  var revSavedText       = document.getElementById('rev-saved-text');
+  var revSavedCheck      = revSavedBox ? revSavedBox.querySelector('.att-saved__check') : null;
+  var revConfirmBody     = document.getElementById('rev-confirm-body');
+  var revConfirmCheck    = document.getElementById('rev-confirm-checkbox');
+  var revConfirmLabel    = document.getElementById('rev-confirm-label');
+  var revReturnBtn       = document.getElementById('rev-return-btn');
+  var revSubmitBtn       = document.getElementById('rev-submit-btn');
+
+  var inReviewMode = false;
+  var isSubmitting = false;
 
   var currentIndex = 0;
   try {
@@ -144,6 +184,19 @@
   };
 
   var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+  function numberWord(n) {
+    return n >= 0 && n < NUMBER_WORDS.length ? NUMBER_WORDS[n] : String(n);
+  }
+
+  function formatQuestionList(nums) {
+    if (nums.length === 0) return '';
+    if (nums.length === 1) return 'Question ' + nums[0];
+    if (nums.length === 2) return 'Questions ' + nums[0] + ' and ' + nums[1];
+    var head = nums.slice(0, nums.length - 1).join(', ');
+    return 'Questions ' + head + ' and ' + nums[nums.length - 1];
+  }
 
   function formatPoints(pts) {
     var n = Number(pts);
@@ -244,12 +297,21 @@
     if (prevBtn) {
       prevBtn.disabled = currentIndex <= 0;
     }
+    var isLastQuestion = currentIndex >= total - 1;
+    // Hide the middle "Review answers" button on the last question because the primary right-hand button
+    // already becomes "Review answers ->", preventing duplicate Review buttons.
+    if (reviewBtn) {
+      reviewBtn.hidden = isLastQuestion;
+    }
     if (nextBtn) {
-      if (currentIndex >= total - 1) {
+      if (isLastQuestion) {
         nextBtn.textContent = 'Review answers \u2192';
       } else {
         nextBtn.textContent = 'Next question \u2192';
       }
+    }
+    if (inReviewMode) {
+      renderReviewSummary();
     }
   }
 
@@ -257,6 +319,12 @@
     if (index < 0 || index >= total) return;
     currentIndex = index;
     persistLocal();
+
+    if (inReviewMode) {
+      inReviewMode = false;
+      if (reviewViewEl) reviewViewEl.hidden = true;
+      if (questionViewEl) questionViewEl.hidden = false;
+    }
 
     var q = questions[currentIndex];
     if (typeEl) {
@@ -346,6 +414,219 @@
     updateProgressUI();
   }
 
+  // =========================================================================
+  // Day 14: Review & Submit View
+  // =========================================================================
+  function createStatusMarkNode(state, labelText) {
+    var wrap = document.createElement('span');
+    wrap.className = 'mark';
+    wrap.setAttribute('data-state', state);
+
+    var ring = document.createElement('span');
+    ring.className = 'mark__ring';
+    ring.setAttribute('aria-hidden', 'true');
+
+    var lbl = document.createElement('span');
+    lbl.className = 'mark__label';
+    lbl.textContent = labelText;
+
+    wrap.appendChild(ring);
+    wrap.appendChild(lbl);
+    return wrap;
+  }
+
+  function renderReviewSummary() {
+    var answered   = countAnswered();
+    var unanswered = total - answered;
+    var unansNums  = getUnansweredNumbers();
+
+    if (revAnsweredCount) {
+      revAnsweredCount.textContent = answered + ' answered';
+    }
+    if (revUnansweredCount) {
+      revUnansweredCount.textContent = unanswered + ' unanswered';
+    }
+
+    // Build two-column question status list (first half in left column, second half in right column)
+    if (revGrid) {
+      while (revGrid.firstChild) {
+        revGrid.removeChild(revGrid.firstChild);
+      }
+      var half = Math.ceil(total / 2);
+      var leftCol = document.createElement('div');
+      leftCol.className = 'rev-col';
+      var rightCol = document.createElement('div');
+      rightCol.className = 'rev-col';
+
+      questions.forEach(function (q, idx) {
+        var isAns = isQuestionAnswered(q);
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'rev-row';
+        row.setAttribute('data-index', String(idx));
+
+        var qLabel = document.createElement('span');
+        qLabel.className = 'rev-row__label';
+        qLabel.textContent = 'Question ' + (idx + 1) + ' \u2197';
+
+        var mark = createStatusMarkNode(isAns ? 'complete' : 'neutral', isAns ? 'Answered' : 'Unanswered');
+
+        row.appendChild(qLabel);
+        row.appendChild(mark);
+        row.addEventListener('click', function () {
+          renderQuestion(idx);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        if (idx < half) {
+          leftCol.appendChild(row);
+        } else {
+          rightCol.appendChild(row);
+        }
+      });
+
+      revGrid.appendChild(leftCol);
+      if (total > 1) {
+        revGrid.appendChild(rightCol);
+      }
+    }
+
+    var maxAtt = Number(attempt.max_attempts || 1);
+    var attemptPhrase = maxAtt === 1 ? 'your only attempt' : ('Attempt ' + attempt.attempt_no + ' of ' + maxAtt);
+
+    if (revConfirmBody) {
+      if (unansNums.length === 0) {
+        revConfirmBody.textContent = 'All ' + total + ' questions are answered. Submitting ends '
+          + attemptPhrase + '. You cannot change your answers or restart afterward.';
+      } else if (unansNums.length === 1) {
+        revConfirmBody.textContent = formatQuestionList(unansNums) + ' is unanswered and will receive zero points. Submitting ends '
+          + attemptPhrase + '. You cannot change your answers or restart afterward.';
+      } else {
+        revConfirmBody.textContent = formatQuestionList(unansNums) + ' are unanswered and will receive zero points. Submitting ends '
+          + attemptPhrase + '. You cannot change your answers or restart afterward.';
+      }
+    }
+
+    if (revConfirmLabel) {
+      if (unansNums.length === 0) {
+        revConfirmLabel.textContent = 'I understand that my attempt will be final.';
+      } else if (unansNums.length === 1) {
+        revConfirmLabel.textContent = 'I understand that my attempt will be final, including the unanswered question.';
+      } else {
+        revConfirmLabel.textContent = 'I understand that my attempt will be final, including the '
+          + numberWord(unansNums.length) + ' unanswered questions.';
+      }
+    }
+
+    if (revReturnBtn) {
+      var targetQ = unansNums.length > 0 ? unansNums[0] : (currentIndex + 1);
+      revReturnBtn.textContent = 'Return to question ' + targetQ;
+      revReturnBtn.setAttribute('data-return-index', String(targetQ - 1));
+    }
+
+    if (revSubmitBtn && revConfirmCheck) {
+      revSubmitBtn.disabled = !revConfirmCheck.checked || isSubmitting;
+    }
+  }
+
+  function openReviewScreen() {
+    var firstUnanswered = -1;
+    for (var i = 0; i < total; i++) {
+      if (!isQuestionAnswered(questions[i])) {
+        firstUnanswered = i;
+        break;
+      }
+    }
+    var ev = new CustomEvent('quiver:review-requested', {
+      cancelable: true,
+      detail: { answered: countAnswered(), total: total, first_unanswered: firstUnanswered }
+    });
+    if (!window.dispatchEvent(ev)) {
+      return;
+    }
+
+    inReviewMode = true;
+    if (revConfirmCheck) {
+      revConfirmCheck.checked = false;
+    }
+    renderReviewSummary();
+    if (questionViewEl) questionViewEl.hidden = true;
+    if (reviewViewEl) reviewViewEl.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Flush any pending unsaved changes when entering the review screen.
+    if (hasDirtyAnswers()) {
+      flushAutosave(false);
+    }
+  }
+
+  function submitFinalAttempt(reason) {
+    if (isSubmitting || !attempt.id) return;
+    isSubmitting = true;
+    if (revSubmitBtn) {
+      revSubmitBtn.disabled = true;
+      revSubmitBtn.textContent = 'Submitting…';
+    }
+
+    // Send all current answers with the final submit so nothing is lost even if an autosave was still queued.
+    var allAnswersPayload = {};
+    Object.keys(answers).forEach(function (qid) {
+      var a = answers[qid];
+      if (!a) return;
+      allAnswersPayload[qid] = {
+        question_id: Number(qid),
+        option_ids: Array.isArray(a.option_ids) ? a.option_ids.slice() : [],
+        answer_text: typeof a.answer_text === 'string' ? a.answer_text : '',
+        revision: Math.max(1, Number(a.revision || 1))
+      };
+    });
+
+    fetch('/api/submit.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
+      body: JSON.stringify({
+        attempt_id: attempt.id,
+        answers: allAnswersPayload,
+        reason: reason || 'student',
+        _csrf: csrfToken
+      }),
+      cache: 'no-store'
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { status: res.status, ok: res.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        var data = result.data || {};
+        if (result.ok && data.ok) {
+          attemptClosed = true;
+          clearRetryTimer();
+          clearLocalDraft();
+          window.location.href = data.redirect_url || ('/student/receipt.php?id=' + encodeURIComponent(String(attempt.id)));
+          return;
+        }
+        isSubmitting = false;
+        if (revSubmitBtn) {
+          revSubmitBtn.disabled = !(revConfirmCheck && revConfirmCheck.checked);
+          revSubmitBtn.textContent = 'Submit final attempt';
+        }
+      })
+      .catch(function () {
+        isSubmitting = false;
+        if (revSubmitBtn) {
+          revSubmitBtn.disabled = !(revConfirmCheck && revConfirmCheck.checked);
+          revSubmitBtn.textContent = 'Submit final attempt';
+        }
+        setSaveIndicator('offline', 'Offline · connection needed to submit final attempt');
+      });
+  }
+
   // ---- Navigation events ----
   if (dotsEl) {
     dotsEl.addEventListener('click', function (ev) {
@@ -366,34 +647,44 @@
     nextBtn.addEventListener('click', function () {
       if (currentIndex < total - 1) {
         renderQuestion(currentIndex + 1);
-      } else if (reviewBtn) {
-        reviewBtn.click();
+      } else {
+        openReviewScreen();
       }
     });
   }
 
   if (reviewBtn) {
     reviewBtn.addEventListener('click', function () {
-      // Jump to the first unanswered question if any, or dispatch review event (Day 14).
-      var firstUnanswered = -1;
-      for (var i = 0; i < total; i++) {
-        if (!isQuestionAnswered(questions[i])) {
-          firstUnanswered = i;
-          break;
-        }
+      openReviewScreen();
+    });
+  }
+
+  if (revConfirmCheck) {
+    revConfirmCheck.addEventListener('change', function () {
+      if (revSubmitBtn) {
+        revSubmitBtn.disabled = !revConfirmCheck.checked || isSubmitting;
       }
-      var ev = new CustomEvent('quiver:review-requested', {
-        cancelable: true,
-        detail: { answered: countAnswered(), total: total, first_unanswered: firstUnanswered }
-      });
-      if (window.dispatchEvent(ev) && firstUnanswered !== -1) {
-        renderQuestion(firstUnanswered);
-      }
+    });
+  }
+
+  if (revReturnBtn) {
+    revReturnBtn.addEventListener('click', function () {
+      var idx = parseInt(revReturnBtn.getAttribute('data-return-index') || '0', 10);
+      renderQuestion(isNaN(idx) ? 0 : idx);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  if (revSubmitBtn) {
+    revSubmitBtn.addEventListener('click', function () {
+      if (revConfirmCheck && !revConfirmCheck.checked) return;
+      submitFinalAttempt('student');
     });
   }
 
   // ---- Keyboard shortcuts: 1..9 / A..I for options, Left/Right arrows for navigation ----
   document.addEventListener('keydown', function (ev) {
+    if (inReviewMode) return;
     if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
     var tag = ev.target && ev.target.tagName ? ev.target.tagName.toUpperCase() : '';
     var inTextField = tag === 'INPUT' && ev.target.type === 'text' || tag === 'TEXTAREA' || ev.target.isContentEditable;
@@ -443,7 +734,7 @@
     600: baseRemaining <= 600,
     300: baseRemaining <= 300,
     60:  baseRemaining <= 60,
-    0:   baseRemaining <= 0
+    0:   false
   };
 
   function getRemainingSeconds() {
@@ -451,16 +742,17 @@
     return Math.max(0, Math.ceil(baseRemaining - elapsedSec));
   }
 
-  function formatCountdown(sec) {
+  function formatCountdown(sec, compact) {
     sec = Math.max(0, Math.floor(sec));
     var hours = Math.floor(sec / 3600);
     var mins  = Math.floor((sec % 3600) / 60);
     var secs  = sec % 60;
     var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    var sep = compact ? ':' : ' : ';
     if (hours > 0) {
-      return hours + ' : ' + pad(mins) + ' : ' + pad(secs);
+      return hours + sep + pad(mins) + sep + pad(secs);
     }
-    return pad(mins) + ' : ' + pad(secs);
+    return pad(mins) + sep + pad(secs);
   }
 
   function announce(msg) {
@@ -471,7 +763,10 @@
   function renderTimer() {
     var rem = getRemainingSeconds();
     if (timerDigits) {
-      timerDigits.textContent = formatCountdown(rem);
+      timerDigits.textContent = formatCountdown(rem, false);
+    }
+    if (revTimerDigits) {
+      revTimerDigits.textContent = formatCountdown(rem, true);
     }
     if (timerBox && timerLabel) {
       var isFinal   = rem > 0 && rem <= 60;
@@ -501,10 +796,11 @@
     }
     if (rem <= 0 && !announced[0]) {
       announced[0] = true;
-      announce('Time is up.');
+      announce('Time is up. Submitting your saved work.');
       try {
         window.dispatchEvent(new CustomEvent('quiver:timer-expired', { detail: { attempt_id: attempt.id } }));
       } catch (e) {}
+      submitFinalAttempt('timeout');
     }
   }
 
@@ -517,7 +813,7 @@
   }
 
   function fetchServerTimer() {
-    if (!attempt.id) return;
+    if (!attempt.id || attemptClosed) return;
     fetch('/api/timer.php?attempt_id=' + encodeURIComponent(String(attempt.id)), {
       method: 'GET',
       credentials: 'same-origin',
@@ -580,20 +876,28 @@
     return getDirtyAnswers().count > 0;
   }
 
-  function setSaveIndicator(state, detailText) {
-    if (!savedBox || !savedText) return;
-    savedBox.classList.toggle('is-saving', state === 'saving');
-    savedBox.classList.toggle('is-offline', state === 'offline');
-    if (savedCheck) {
+  function applySaveBoxState(box, checkEl, textEl, state, detailText) {
+    if (!box || !textEl) return;
+    box.classList.toggle('is-saving', state === 'saving');
+    box.classList.toggle('is-offline', state === 'offline');
+    if (checkEl) {
       if (state === 'offline') {
-        savedCheck.textContent = '!';
+        checkEl.textContent = '!';
       } else if (state === 'saving') {
-        savedCheck.textContent = '…';
+        checkEl.textContent = '…';
       } else {
-        savedCheck.textContent = '✓';
+        checkEl.textContent = '✓';
       }
     }
-    savedText.textContent = detailText;
+    textEl.textContent = detailText;
+  }
+
+  function setSaveIndicator(state, detailText) {
+    applySaveBoxState(savedBox, savedCheck, savedText, state, detailText);
+    var revText = detailText.indexOf('Saved · ') === 0
+      ? 'Last saved · ' + detailText.slice('Saved · '.length)
+      : detailText;
+    applySaveBoxState(revSavedBox, revSavedCheck, revSavedText, state, revText);
   }
 
   function updateSaveIndicatorDefault() {
@@ -707,6 +1011,7 @@
         if (result.status === 409 || data.status === 'submitted' || data.status === 'graded' || data.status === 'voided') {
           attemptClosed = true;
           clearRetryTimer();
+          window.location.href = '/student/receipt.php?id=' + encodeURIComponent(String(attempt.id));
           return false;
         }
 
@@ -761,12 +1066,14 @@
       });
   }
 
-  // Expose autosave API for Day 14 review/submit and testing.
+  // Expose autosave & review API for Day 14 review/submit and testing.
   window.quiverAutosave = {
     flush: function () { return flushAutosave(true); },
     hasUnsaved: hasDirtyAnswers,
     getAnswers: function () { return answers; },
-    getAckedRevisions: function () { return ackedRevisions; }
+    getAckedRevisions: function () { return ackedRevisions; },
+    openReview: openReviewScreen,
+    submitFinal: submitFinalAttempt
   };
 
   // Reconnect & visibility listeners

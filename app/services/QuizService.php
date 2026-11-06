@@ -20,6 +20,8 @@ final class QuizService
      */
     public static function find(int $id, int $teacherId): ?array
     {
+        AttemptService::finalizeOverdue($id, $teacherId);
+
         $stmt = db()->prepare(
             'SELECT q.*, c.name AS class_name, c.subject, c.section, c.course_code
                FROM quizzes q
@@ -99,6 +101,8 @@ final class QuizService
         string $tab = 'all',
         int $page = 1
     ): array {
+        AttemptService::finalizeOverdue(null, $teacherId);
+
         $where = ['c.teacher_id = ?'];
         $args  = [$teacherId];
 

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../app/helpers/layout.php';
 
 $user      = require_role('teacher');
 $teacherId = (int) $user['id'];
+AttemptService::finalizeOverdue(null, $teacherId);
 
 function bank_url(array $p): string
 {

@@ -67,7 +67,9 @@ if (!$home) {
                 } else {
                     $mark = status_mark('complete', 'Submitted');
                     $meta = 'All ' . $max . ' ' . ($max === 1 ? 'attempt' : 'attempts') . ' used';
-                    $btn  = '';
+                    $btn  = $q['last_completed_id'] !== null
+                        ? '<a class="btn btn--pill" href="/student/receipt.php?id=' . (int) $q['last_completed_id'] . '">Receipt &rarr;</a>'
+                        : '';
                 }
                 echo '<li class="h-quiz"><div><div class="h-quiz__title">' . e($q['title']) . '</div>'
                    . '<div class="h-quiz__meta">' . $mark . ' · ' . e($meta) . '</div></div>' . $btn . '</li>';

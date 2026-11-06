@@ -135,6 +135,8 @@ student_start((string) $q['title'], $classLabel, true, ['/assets/css/student.css
         <input type="hidden" name="quiz_id" value="<?= (int) $q['id'] ?>">
         <button class="btn btn--primary btn--pill" type="submit"><?= $q['running_id'] !== null ? 'Resume quiz' : 'Begin quiz' ?> &rarr;</button>
       </form>
+    <?php elseif (($q['last_completed_id'] ?? null) !== null): ?>
+      <a class="btn btn--pill" href="/student/receipt.php?id=<?= (int) $q['last_completed_id'] ?>">View receipt &rarr;</a>
     <?php endif; ?>
   </div>
 </section>

@@ -38,7 +38,7 @@ $isFinalMin   = (int) $a['remaining_seconds'] > 0 && (int) $a['remaining_seconds
 
 student_start($q['title'], (string) ($q['class_label'] ?? ''), true, ['/assets/css/student.css', '/assets/css/attempt.css']);
 ?>
-<div class="att" data-attempt-id="<?= (int) $a['id'] ?>">
+<div class="att" data-attempt-id="<?= (int) $a['id'] ?>" data-csrf="<?= e(csrf_token()) ?>">
   <div class="q-head">
     <h1><?= e($q['title']) ?></h1>
     <p class="q-meta">Attempt <?= (int) $a['attempt_no'] ?> of <?= (int) $a['max_attempts'] ?> · Work at your own pace within the time limit.</p>

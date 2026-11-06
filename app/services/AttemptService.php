@@ -307,6 +307,212 @@ final class AttemptService
         ];
     }
 
+    // ------------------------------------------------------------------ autosave & heartbeat (Day 13)
+
+    /**
+     * Autosave answers and/or record a heartbeat on an attempt.
+     *
+     * Rules enforced here:
+     *  1. Transaction with row lock (`SELECT ... FOR UPDATE`) on `quiz_attempts`.
+     *  2. Ownership check: attempt must belong to `$studentId`, else return `not_found`.
+     *  3. Status & 15-second grace window: attempt must be `in_progress` and `now <= deadline_at + 15 seconds`.
+     *  4. Question & option ownership: only questions belonging to this attempt's `quiz_id` are accepted;
+     *     for choice questions, only option IDs belonging to that `quiz_question_id` are accepted (single/true_false truncated to 1).
+     *  5. Revision counter: stale updates (`revision <= stored revision`) are ignored so a delayed retry never overwrites a newer answer.
+     *  6. Heartbeat: updates `last_seen_at = now` on every valid call (even when `answers` is empty).
+     *
+     * @param array<int|string, mixed> $incomingAnswers
+     * @return array{
+     *   result: 'ok'|'not_found'|'closed',
+     *   attempt_id?: int,
+     *   status?: string,
+     *   remaining_seconds?: int,
+     *   saved_manila?: string,
+     *   saved_revisions?: array<int, int>
+     * }
+     */
+    public static function autosave(int $attemptId, int $studentId, array $incomingAnswers = [], ?string $nowUtc = null): array
+    {
+        $now = $nowUtc ?? utc_now();
+        $utc = new DateTimeZone('UTC');
+        $nowDt = new DateTimeImmutable($now, $utc);
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            // 1 & 2. Lock attempt row and verify ownership.
+            $lock = $pdo->prepare(
+                'SELECT id, quiz_id, status, deadline_at, last_seen_at
+                   FROM quiz_attempts
+                  WHERE id = ? AND student_id = ?
+                  FOR UPDATE'
+            );
+            $lock->execute([$attemptId, $studentId]);
+            $att = $lock->fetch();
+            if ($att === false) {
+                $pdo->rollBack();
+                return ['result' => 'not_found'];
+            }
+
+            $deadlineDt = new DateTimeImmutable((string) $att['deadline_at'], $utc);
+            $remaining = max(0, $deadlineDt->getTimestamp() - $nowDt->getTimestamp());
+
+            // 3. Must be in_progress and within the 15-second grace window after deadline_at.
+            $graceDeadlineTs = $deadlineDt->getTimestamp() + 15;
+            if ($att['status'] !== 'in_progress' || $nowDt->getTimestamp() > $graceDeadlineTs) {
+                $pdo->rollBack();
+                return [
+                    'result'            => 'closed',
+                    'attempt_id'        => (int) $att['id'],
+                    'status'            => (string) $att['status'],
+                    'remaining_seconds' => 0,
+                    'saved_manila'      => $att['last_seen_at'] !== null ? to_manila((string) $att['last_seen_at'], 'j M Y, H:i:s') : '',
+                    'saved_revisions'   => [],
+                ];
+            }
+
+            $quizId = (int) $att['quiz_id'];
+
+            // Load valid questions and their types for this quiz.
+            $qStmt = $pdo->prepare('SELECT id, type FROM quiz_questions WHERE quiz_id = ?');
+            $qStmt->execute([$quizId]);
+            $validQuestions = [];
+            foreach ($qStmt->fetchAll() as $qRow) {
+                $validQuestions[(int) $qRow['id']] = (string) $qRow['type'];
+            }
+
+            // Load currently stored responses for this attempt (already protected by the attempt row lock).
+            $rStmt = $pdo->prepare('SELECT id, quiz_question_id, revision FROM responses WHERE attempt_id = ?');
+            $rStmt->execute([$attemptId]);
+            $storedResponses = [];
+            foreach ($rStmt->fetchAll() as $rRow) {
+                $storedResponses[(int) $rRow['quiz_question_id']] = [
+                    'id'       => (int) $rRow['id'],
+                    'revision' => (int) $rRow['revision'],
+                ];
+            }
+
+            // Normalize incoming answers: accept either a map keyed by question_id or a list of answer items.
+            $normalized = [];
+            foreach ($incomingAnswers as $key => $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $qid = isset($item['question_id']) ? (int) $item['question_id'] : (int) $key;
+                if ($qid > 0) {
+                    $normalized[$qid] = $item;
+                }
+            }
+
+            $savedRevisions = [];
+            foreach ($storedResponses as $qid => $sr) {
+                $savedRevisions[$qid] = $sr['revision'];
+            }
+
+            foreach ($normalized as $qid => $item) {
+                // 4a. Ignore any question ID that does not belong to this quiz.
+                if (!isset($validQuestions[$qid])) {
+                    continue;
+                }
+
+                $qType = $validQuestions[$qid];
+                $incomingRev = isset($item['revision']) ? (int) $item['revision'] : 0;
+                if ($incomingRev <= 0) {
+                    continue;
+                }
+
+                $existing = $storedResponses[$qid] ?? null;
+                // 5. Revision check: ignore stale or duplicate saves (revision <= stored).
+                if ($existing !== null && $incomingRev <= $existing['revision']) {
+                    $savedRevisions[$qid] = $existing['revision'];
+                    continue;
+                }
+
+                $isChoice = in_array($qType, self::CHOICE_TYPES, true);
+                $answerText = null;
+                $validOptionIds = [];
+
+                if ($isChoice) {
+                    $rawOpts = isset($item['option_ids']) && is_array($item['option_ids']) ? $item['option_ids'] : [];
+                    $candidateIds = [];
+                    foreach ($rawOpts as $oid) {
+                        $oidInt = (int) $oid;
+                        if ($oidInt > 0) {
+                            $candidateIds[$oidInt] = $oidInt;
+                        }
+                    }
+                    if ($candidateIds) {
+                        $inSql = implode(',', array_fill(0, count($candidateIds), '?'));
+                        $optStmt = $pdo->prepare(
+                            "SELECT id FROM quiz_question_options
+                              WHERE quiz_question_id = ? AND id IN ($inSql)
+                              ORDER BY position, id"
+                        );
+                        $optStmt->execute(array_merge([$qid], array_values($candidateIds)));
+                        $validOptionIds = array_map('intval', $optStmt->fetchAll(PDO::FETCH_COLUMN));
+                        if ($qType !== 'multi' && count($validOptionIds) > 1) {
+                            $validOptionIds = [$validOptionIds[0]];
+                        }
+                    }
+                } else {
+                    $rawText = $item['answer_text'] ?? '';
+                    $answerText = is_string($rawText) || is_numeric($rawText) ? (string) $rawText : '';
+                }
+
+                if ($existing === null) {
+                    $insR = $pdo->prepare(
+                        'INSERT INTO responses (attempt_id, quiz_question_id, answer_text, revision)
+                         VALUES (?, ?, ?, ?)'
+                    );
+                    $insR->execute([$attemptId, $qid, $answerText, $incomingRev]);
+                    $responseId = (int) $pdo->lastInsertId();
+                    $storedResponses[$qid] = ['id' => $responseId, 'revision' => $incomingRev];
+                } else {
+                    $responseId = $existing['id'];
+                    $updR = $pdo->prepare(
+                        'UPDATE responses SET answer_text = ?, revision = ? WHERE id = ?'
+                    );
+                    $updR->execute([$answerText, $incomingRev, $responseId]);
+                    $storedResponses[$qid]['revision'] = $incomingRev;
+                }
+
+                if ($isChoice) {
+                    $pdo->prepare('DELETE FROM response_options WHERE response_id = ?')->execute([$responseId]);
+                    if ($validOptionIds) {
+                        $insOpt = $pdo->prepare(
+                            'INSERT INTO response_options (response_id, quiz_question_option_id) VALUES (?, ?)'
+                        );
+                        foreach ($validOptionIds as $oid) {
+                            $insOpt->execute([$responseId, $oid]);
+                        }
+                    }
+                }
+
+                $savedRevisions[$qid] = $incomingRev;
+            }
+
+            // 6. Heartbeat: update last_seen_at on every valid autosave/heartbeat call.
+            $pdo->prepare('UPDATE quiz_attempts SET last_seen_at = ? WHERE id = ?')
+                ->execute([$now, $attemptId]);
+
+            $pdo->commit();
+
+            return [
+                'result'            => 'ok',
+                'attempt_id'        => $attemptId,
+                'status'            => 'in_progress',
+                'remaining_seconds' => $remaining,
+                'saved_manila'      => to_manila($now, 'j M Y, H:i:s'),
+                'saved_revisions'   => $savedRevisions,
+            ];
+        } catch (Throwable $t) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $t;
+        }
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private static function visibleQuiz(int $studentId, int $quizId): ?array

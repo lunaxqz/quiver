@@ -121,6 +121,74 @@ try {
     $html = json_encode($payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
     check('LEAK: the embedded page JSON has no answer keys either', !str_contains((string) $html, 'is_correct') && !str_contains((string) $html, 'SHORT_KEY_SECRET'));
 
+    // ---------------------------------------------------------------- Day 13: autosave, revisions, grace window, heartbeat
+    $attId = (int) $first['attempt_id'];
+    $qSingleId = (int) $payload['questions'][0]['id'];
+    $qShortId  = (int) $payload['questions'][1]['id'];
+    $qEssayId  = (int) $payload['questions'][2]['id'];
+    $optRouterId = (int) $payload['questions'][0]['options'][1]['id'];
+    $optHubId    = (int) $payload['questions'][0]['options'][0]['id'];
+
+    check('an outsider cannot autosave into someone else\'s attempt',
+        AttemptService::autosave($attId, $outsider, [$qSingleId => ['option_ids' => [$optRouterId], 'revision' => 1]])['result'] === 'not_found');
+
+    // Save 2 answers (simulating offline queue flushing 2 answered questions on reconnect)
+    $saveTime1 = gmdate('Y-m-d H:i:s', time() + 60);
+    $save1 = AttemptService::autosave($attId, $student, [
+        $qSingleId => ['option_ids' => [$optRouterId], 'revision' => 2],
+        $qShortId  => ['answer_text' => 'Domain Name System', 'revision' => 1],
+    ], $saveTime1);
+    check('autosave succeeds and returns Manila timestamp and saved revisions',
+        $save1['result'] === 'ok'
+        && $save1['saved_manila'] === to_manila($saveTime1, 'j M Y, H:i:s')
+        && ($save1['saved_revisions'][$qSingleId] ?? 0) === 2
+        && ($save1['saved_revisions'][$qShortId] ?? 0) === 1);
+
+    // Stale revision check: revision 1 arrives late after revision 2 is already stored
+    $stale = AttemptService::autosave($attId, $student, [
+        $qSingleId => ['option_ids' => [$optHubId], 'revision' => 1],
+    ], gmdate('Y-m-d H:i:s', time() + 65));
+    $afterStale = AttemptService::payload($attId, $student);
+    $afterResp  = (array) $afterStale['responses'];
+    check('stale revision (<= stored) is ignored and never overwrites a newer answer',
+        $stale['result'] === 'ok'
+        && ($afterResp[$qSingleId]['revision'] ?? 0) === 2
+        && ($afterResp[$qSingleId]['option_ids'] ?? []) === [$optRouterId]
+        && ($afterResp[$qShortId]['answer_text'] ?? '') === 'Domain Name System');
+
+    // Newer revision overwrites cleanly
+    $newer = AttemptService::autosave($attId, $student, [
+        $qSingleId => ['option_ids' => [$optHubId], 'revision' => 3],
+    ], gmdate('Y-m-d H:i:s', time() + 70));
+    $afterNewer = (array) AttemptService::payload($attId, $student)['responses'];
+    check('newer revision (> stored) updates the stored option selection',
+        $newer['result'] === 'ok'
+        && ($afterNewer[$qSingleId]['revision'] ?? 0) === 3
+        && ($afterNewer[$qSingleId]['option_ids'] ?? []) === [$optHubId]);
+
+    // Heartbeat with empty answers updates last_seen_at
+    $hbTime = gmdate('Y-m-d H:i:s', time() + 90);
+    $hb = AttemptService::autosave($attId, $student, [], $hbTime);
+    $seenRow = $pdo->query('SELECT last_seen_at FROM quiz_attempts WHERE id = ' . $attId)->fetch();
+    check('heartbeat call with empty answers updates last_seen_at',
+        $hb['result'] === 'ok' && (string) $seenRow['last_seen_at'] === $hbTime);
+
+    // 15-second grace window: 10s after deadline_at is accepted; 16s after deadline_at is refused
+    $deadlineNow = (string) $pdo->query('SELECT deadline_at FROM quiz_attempts WHERE id = ' . $attId)->fetchColumn();
+    $plus10s = gmdate('Y-m-d H:i:s', strtotime($deadlineNow . ' UTC') + 10);
+    $plus16s = gmdate('Y-m-d H:i:s', strtotime($deadlineNow . ' UTC') + 16);
+    $withinGrace = AttemptService::autosave($attId, $student, [
+        $qEssayId => ['answer_text' => 'Saved inside 15s grace window.', 'revision' => 1],
+    ], $plus10s);
+    $pastGrace = AttemptService::autosave($attId, $student, [
+        $qEssayId => ['answer_text' => 'Too late.', 'revision' => 2],
+    ], $plus16s);
+    $afterGrace = (array) AttemptService::payload($attId, $student)['responses'];
+    check('autosave within the 15-second grace window succeeds, and past 15s is refused',
+        $withinGrace['result'] === 'ok'
+        && $pastGrace['result'] === 'closed'
+        && ($afterGrace[$qEssayId]['answer_text'] ?? '') === 'Saved inside 15s grace window.');
+
     // ---------------------------------------------------------------- attempt limit
     $pdo->exec("UPDATE quiz_attempts SET status = 'submitted', submit_reason = 'student', submitted_at = '" . utc_now() . "' WHERE id = " . (int) $first['attempt_id']);
     check('after submitting the only attempt, a new one is refused', AttemptService::start($student, $open)['result'] === 'limit');
@@ -179,6 +247,8 @@ try {
     $u = $in($ids['users']);
     $c = $in($ids['classes']);
     $qz = $in(array_merge($ids['quizzes'], $pdo->query('SELECT id FROM quizzes WHERE class_id IN (' . $c . ')')->fetchAll(PDO::FETCH_COLUMN)));
+    $pdo->exec('DELETE FROM response_options WHERE response_id IN (SELECT id FROM responses WHERE attempt_id IN (SELECT id FROM quiz_attempts WHERE quiz_id IN (' . $qz . ')))');
+    $pdo->exec('DELETE FROM responses WHERE attempt_id IN (SELECT id FROM quiz_attempts WHERE quiz_id IN (' . $qz . '))');
     $pdo->exec('DELETE FROM quiz_attempts WHERE quiz_id IN (' . $qz . ')');
     $pdo->exec('DELETE FROM quiz_question_options WHERE quiz_question_id IN (SELECT id FROM quiz_questions WHERE quiz_id IN (' . $qz . '))');
     $pdo->exec('DELETE FROM quiz_questions WHERE quiz_id IN (' . $qz . ')');

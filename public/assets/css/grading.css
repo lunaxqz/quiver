@@ -1,0 +1,510 @@
+/* Day 15: Teacher Grading Stack & Whole-Paper Mode (matches Figma "QUIVER Databases grading.png") */
+
+.page-head h1 {
+  font-family: var(--font-read);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.grading-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+/* ---- Quiz switcher bar (when teacher has multiple published quizzes) ---- */
+.grading-quiz-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+.grading-quiz-switcher__label {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.grading-quiz-switcher__select {
+  max-width: 380px;
+  padding: 6px 12px;
+  font-size: var(--t-sm);
+}
+
+/* ---- Subbar: Mode Tabs + Blind Mode Pill ---- */
+.grading-subbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--s4);
+}
+
+.grading-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+}
+
+.grading-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: var(--s2) 0 var(--s3);
+  margin-bottom: -1px;
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.grading-tab:hover {
+  color: var(--ink);
+}
+.grading-tab.is-active {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--ink);
+}
+
+.grading-subbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding-bottom: var(--s2);
+}
+
+.btn-blind-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-blind-pill:hover {
+  border-color: var(--ink-3);
+}
+.btn-blind-pill__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--ink-3);
+  background: transparent;
+}
+.btn-blind-pill.is-on .btn-blind-pill__dot {
+  border-color: var(--ink);
+  background: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--surface);
+}
+
+.btn-help-pill {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+}
+.btn-help-pill:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* ---- Toolbar: Question context + Previous / Next / Undo ---- */
+.grading-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+  flex-wrap: wrap;
+}
+
+.grading-toolbar__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grading-toolbar__title {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.grading-toolbar__sub {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.grading-toolbar__selectors {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s1);
+}
+.input--sm {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: var(--r-control);
+  max-width: 280px;
+}
+
+.grading-toolbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.btn-pill-nav {
+  appearance: none;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-pill-nav:hover:not(:disabled) {
+  border-color: var(--ink-2);
+}
+.btn-pill-nav:disabled {
+  background: rgba(27, 26, 23, 0.04);
+  color: var(--ink-3);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+/* ---- Main 2-column Grading Grid ---- */
+.grading-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
+  gap: var(--s4);
+  align-items: start;
+}
+
+@media (max-width: 920px) {
+  .grading-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grading-col-left,
+.grading-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.grading-prompt-card,
+.grading-response-card,
+.grading-rubric-card,
+.grading-score-card,
+.paper-question-strip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-surface);
+  padding: var(--s5);
+}
+
+.grading-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--s3);
+}
+
+.grading-prompt-text {
+  font-family: var(--font-read);
+  font-size: 20px;
+  line-height: 1.45;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.grading-response-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+.grading-response-head .grading-eyebrow {
+  margin-bottom: 0;
+}
+
+.grading-type-tag {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.grading-response-body {
+  font-family: var(--font-read);
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--ink);
+  min-height: 140px;
+  white-space: pre-wrap;
+  padding-bottom: var(--s4);
+}
+.grading-response-body--empty {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.grading-auto-banner {
+  margin-bottom: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-control);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.grading-response-foot {
+  margin: 0;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+
+.grading-shortcuts-hint {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: 0;
+  padding: 0 var(--s1);
+}
+.grading-shortcuts-hint kbd,
+.shortcuts-list kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font: 11px/1.3 var(--font-ui);
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+/* ---- Right Column: Key & Rubric Card ---- */
+.grading-rubric-title {
+  font-family: var(--font-read);
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: var(--s3);
+  color: var(--ink);
+}
+
+.grading-rubric-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+/* ---- Right Column: Scoring Form Card ---- */
+.grading-quick-pills {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  margin-bottom: var(--s4);
+}
+
+.btn-quick-score {
+  appearance: none;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-quick-score:hover {
+  border-color: var(--ink);
+}
+.btn-quick-score.is-selected {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.grading-field {
+  margin-bottom: var(--s3);
+}
+.grading-field .field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.grading-points-input {
+  width: 100%;
+  font-size: var(--t-base);
+  font-weight: 500;
+}
+
+.grading-field-hint {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: 6px 0 0;
+}
+
+.grading-feedback-input {
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.grading-save-state {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-bottom: var(--s3);
+}
+.grading-save-state[data-status="saved"] {
+  color: var(--complete);
+}
+.grading-save-state[data-status="error"] {
+  color: var(--problem);
+}
+
+.grading-submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.btn-save-next {
+  appearance: none;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-save-next:hover:not(:disabled) {
+  opacity: 0.92;
+}
+.btn-save-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Whole-paper question strip ---- */
+.paper-question-strip {
+  padding: var(--s3) var(--s4);
+}
+.paper-question-strip__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s2);
+  font-size: 12px;
+}
+.paper-question-strip__title {
+  font-weight: 600;
+  color: var(--ink);
+}
+.paper-question-strip__score {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.paper-question-strip__pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.paper-q-pill {
+  appearance: none;
+  padding: 5px 10px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.paper-q-pill:hover {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+.paper-q-pill.is-active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+.paper-q-pill.is-pending {
+  border-color: var(--attention);
+  color: var(--attention);
+}
+.paper-q-pill.is-pending.is-active {
+  background: var(--attention);
+  color: var(--surface);
+}
+
+/* ---- Shortcuts Modal ---- */
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin: var(--s3) 0 var(--s4);
+}
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-sm);
+}
+.shortcuts-row dt {
+  font-weight: 600;
+  color: var(--ink);
+}
+.shortcuts-row dd {
+  margin: 0;
+  color: var(--ink-2);
+  text-align: right;
+}

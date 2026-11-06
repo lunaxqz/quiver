@@ -24,29 +24,22 @@ $ids = ['users' => [], 'classes' => [], 'quizzes' => []];
 try {
     // Setup test users
     $now = utc_now();
-    $pwd = password_hash('Secret123!', PASSWORD_DEFAULT);
+    $tag = 'authz_' . bin2hex(random_bytes(3));
+    $mk = static function (string $suffix, string $role) use ($tag, &$ids): array {
+        $id = AuthService::createUser($tag . '_' . $suffix, 'Test ' . $suffix, 'Password-' . bin2hex(random_bytes(4)), $role);
+        $ids['users'][] = $id;
+        return ['id' => $id];
+    };
 
-    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
-    $stmt->execute(['teacher_a_' . time(), $pwd, 'teacher', 'active', $now, $now]);
-    $ids['users'][] = (int) $pdo->lastInsertId();
-    $teacherA = ['id' => end($ids['users'])];
-
-    $stmt->execute(['teacher_b_' . time(), $pwd, 'teacher', 'active', $now, $now]);
-    $ids['users'][] = (int) $pdo->lastInsertId();
-    $teacherB = ['id' => end($ids['users'])];
-
-    $stmt->execute(['student_1_' . time(), $pwd, 'student', 'active', $now, $now]);
-    $ids['users'][] = (int) $pdo->lastInsertId();
-    $student1 = ['id' => end($ids['users'])];
+    $teacherA = $mk('ta', 'teacher');
+    $teacherB = $mk('tb', 'teacher');
+    $student1 = $mk('s1', 'student');
 
     // Setup classes
-    $cStmt = $pdo->prepare('INSERT INTO classes (teacher_id, name, subject, section, course_code, school_year, join_code, code_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $cStmt->execute([$teacherA['id'], 'Networking', 'IT', 'Sec A', 'IT301', '2026-2027', 'NET101', 1, $now, $now]);
-    $classA = (int) $pdo->lastInsertId();
+    $classA = ClassService::create($teacherA['id'], 'Networking', 'IT301', 'Sec A', '2026-2027');
     $ids['classes'][] = $classA;
 
-    $cStmt->execute([$teacherB['id'], 'Databases', 'CS', 'Sec B', 'CS201', '2026-2027', 'DAT201', 1, $now, $now]);
-    $classB = (int) $pdo->lastInsertId();
+    $classB = ClassService::create($teacherB['id'], 'Databases', 'CS201', 'Sec B', '2026-2027');
     $ids['classes'][] = $classB;
 
     // --- Quizzes & Drafts ---
@@ -196,6 +189,7 @@ try {
             $pdo->exec('DELETE FROM quiz_question_options WHERE quiz_question_id IN (' . $qq . ')');
             $pdo->exec('DELETE FROM quiz_questions WHERE quiz_id IN (' . $qz . ')');
         }
+        $pdo->exec('UPDATE quizzes SET previous_version_id = NULL WHERE id IN (' . $qz . ')');
         $pdo->exec('DELETE FROM quizzes WHERE id IN (' . $qz . ')');
     }
 

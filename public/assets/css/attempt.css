@@ -309,6 +309,19 @@
   color: var(--ink-2);
 }
 
+.att-saved.is-saving {
+  color: var(--ink-2);
+}
+
+.att-saved.is-offline {
+  color: var(--attention);
+  font-weight: 500;
+}
+
+.att-saved.is-offline .att-saved__check {
+  color: var(--attention);
+}
+
 /* ---- Bottom navigation bar ---- */
 .att-nav {
   display: flex;

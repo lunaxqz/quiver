@@ -12,6 +12,16 @@
 (function () {
   'use strict';
 
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   const root = document.getElementById('live-root');
   if (!root) return;
 
@@ -233,8 +243,11 @@
       const extBtn = document.createElement('button');
       extBtn.type = 'button';
       extBtn.className = 'live-btn-action';
+      extBtn.dataset.action = 'extend';
+      extBtn.dataset.attemptId = p.attempt_id;
+      extBtn.dataset.studentName = p.full_name;
+      extBtn.dataset.deadline = p.deadline_manila || '';
       extBtn.textContent = 'Extend time...';
-      extBtn.addEventListener('click', () => openExtendModal(p));
       actTd.appendChild(extBtn);
     }
 
@@ -242,8 +255,11 @@
       const voidBtn = document.createElement('button');
       voidBtn.type = 'button';
       voidBtn.className = 'live-btn-action live-btn-action--danger';
+      voidBtn.dataset.action = 'void';
+      voidBtn.dataset.attemptId = p.attempt_id;
+      voidBtn.dataset.studentName = p.full_name;
+      voidBtn.dataset.attemptNo = p.attempt_no || 1;
       voidBtn.textContent = 'Void attempt...';
-      voidBtn.addEventListener('click', () => openVoidModal(p));
       actTd.appendChild(voidBtn);
     }
 
@@ -324,9 +340,9 @@
   }
 
   // ---- 5. Time Extension Modal ----
-  function openExtendModal(p) {
+  function openExtendModal(opts) {
     if (!extendModal) return;
-    currentExtendAttemptId = p.attempt_id;
+    currentExtendAttemptId = parseInt(opts.attempt_id, 10);
 
     const nameEl = document.getElementById('modal-extend-name');
     const deadlineEl = document.getElementById('modal-extend-deadline');
@@ -334,8 +350,8 @@
     const noteInput = document.getElementById('modal-extend-note');
     const errorEl = document.getElementById('modal-extend-error');
 
-    if (nameEl) nameEl.textContent = p.full_name;
-    if (deadlineEl) deadlineEl.textContent = p.deadline_manila || 'Current deadline';
+    if (nameEl) nameEl.textContent = opts.full_name || 'Student';
+    if (deadlineEl) deadlineEl.textContent = opts.deadline_manila || 'Current deadline';
     if (minInput) minInput.value = '5';
     if (noteInput) noteInput.value = '';
     if (errorEl) {
@@ -356,15 +372,6 @@
     if (extendModal) extendModal.hidden = true;
     currentExtendAttemptId = null;
   }
-
-  document.querySelectorAll('#modal-extend .live-chip-btn').forEach((btn) => {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('#modal-extend .live-chip-btn').forEach((b) => b.classList.remove('is-selected'));
-      this.classList.add('is-selected');
-      const minInput = document.getElementById('modal-extend-minutes');
-      if (minInput) minInput.value = this.dataset.min;
-    });
-  });
 
   const extendForm = document.getElementById('modal-extend-form');
   if (extendForm) {
@@ -418,15 +425,16 @@
   }
 
   // ---- 6. Void Attempt Modal ----
-  function openVoidModal(p) {
+  function openVoidModal(opts) {
     if (!voidModal) return;
-    currentVoidAttemptId = p.attempt_id;
+    currentVoidAttemptId = parseInt(opts.attempt_id, 10);
 
     const nameEl = document.getElementById('modal-void-name');
     const reasonInput = document.getElementById('modal-void-reason');
     const errorEl = document.getElementById('modal-void-error');
 
-    if (nameEl) nameEl.textContent = `${p.full_name} (Attempt #${p.attempt_no || 1})`;
+    const label = opts.full_name ? `${opts.full_name} (Attempt #${opts.attempt_no || 1})` : 'Attempt';
+    if (nameEl) nameEl.textContent = label;
     if (reasonInput) reasonInput.value = '';
     if (errorEl) {
       errorEl.hidden = true;
@@ -497,28 +505,65 @@
     });
   }
 
-  // Backdrop click and Escape key listeners
+  // Delegated click handler for buttons across the document
+  document.addEventListener('click', function (e) {
+    // 1. Extend time action button
+    const extBtn = e.target.closest('[data-action="extend"]');
+    if (extBtn) {
+      e.preventDefault();
+      openExtendModal({
+        attempt_id: extBtn.dataset.attemptId,
+        full_name: extBtn.dataset.studentName,
+        deadline_manila: extBtn.dataset.deadline,
+      });
+      return;
+    }
+
+    // 2. Void attempt action button
+    const voidBtn = e.target.closest('[data-action="void"]');
+    if (voidBtn) {
+      e.preventDefault();
+      openVoidModal({
+        attempt_id: voidBtn.dataset.attemptId,
+        full_name: voidBtn.dataset.studentName,
+        attempt_no: voidBtn.dataset.attemptNo,
+      });
+      return;
+    }
+
+    // 3. Modal close buttons (cancel / cross)
+    if (e.target.matches('[data-close-modal]') || e.target.closest('[data-close-modal]')) {
+      e.preventDefault();
+      closeExtendModal();
+      closeVoidModal();
+      return;
+    }
+
+    // 4. Backdrop click
+    if (e.target.classList.contains('live-modal-backdrop')) {
+      closeExtendModal();
+      closeVoidModal();
+      return;
+    }
+
+    // 5. Minute chips
+    const chipBtn = e.target.closest('#modal-extend .live-chip-btn');
+    if (chipBtn) {
+      e.preventDefault();
+      document.querySelectorAll('#modal-extend .live-chip-btn').forEach((b) => b.classList.remove('is-selected'));
+      chipBtn.classList.add('is-selected');
+      const minInput = document.getElementById('modal-extend-minutes');
+      if (minInput) minInput.value = chipBtn.dataset.min;
+      return;
+    }
+  });
+
+  // Escape key listener to close modals
   window.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       closeExtendModal();
       closeVoidModal();
     }
-  });
-
-  document.querySelectorAll('.live-modal-backdrop').forEach((backdrop) => {
-    backdrop.addEventListener('click', function (e) {
-      if (e.target === this) {
-        closeExtendModal();
-        closeVoidModal();
-      }
-    });
-  });
-
-  document.querySelectorAll('[data-close-modal]').forEach((btn) => {
-    btn.addEventListener('click', function () {
-      closeExtendModal();
-      closeVoidModal();
-    });
   });
 
   // ---- 7. Toast Notification ----

@@ -400,6 +400,9 @@
 }
 
 /* ---- Accessible Modal Dialogs ---- */
+.live-modal-backdrop[hidden] {
+  display: none !important;
+}
 .live-modal-backdrop {
   position: fixed;
   inset: 0;

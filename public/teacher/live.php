@@ -257,7 +257,10 @@ teacher_start(
                 <?php if (!empty($p['can_extend']) && !empty($p['attempt_id'])): ?>
                   <button class="live-btn-action"
                           type="button"
-                          onclick='window.dispatchEvent(new CustomEvent("open-extend", {detail: <?= json_encode($p, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>}))'>
+                          data-action="extend"
+                          data-attempt-id="<?= (int) $p['attempt_id'] ?>"
+                          data-student-name="<?= e((string) ($p['short_name'] ?: $p['full_name'])) ?>"
+                          data-deadline="<?= e((string) ($p['deadline_manila'] ?? '')) ?>">
                     Extend time...
                   </button>
                 <?php endif; ?>
@@ -265,7 +268,10 @@ teacher_start(
                 <?php if (!empty($p['can_void']) && !empty($p['attempt_id'])): ?>
                   <button class="live-btn-action live-btn-action--danger"
                           type="button"
-                          onclick='window.dispatchEvent(new CustomEvent("open-void", {detail: <?= json_encode($p, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>}))'>
+                          data-action="void"
+                          data-attempt-id="<?= (int) $p['attempt_id'] ?>"
+                          data-student-name="<?= e((string) ($p['short_name'] ?: $p['full_name'])) ?>"
+                          data-attempt-no="<?= (int) ($p['attempt_no'] ?: 1) ?>">
                     Void attempt...
                   </button>
                 <?php endif; ?>
@@ -402,111 +408,6 @@ teacher_start(
 </div>
 
 <script src="/assets/js/live.js"></script>
-<script>
-  // Bridge custom events from PHP-rendered buttons to JS modal openers
-  window.addEventListener("open-extend", function(e) {
-    const p = e.detail;
-    const modal = document.getElementById("modal-extend");
-    if (!modal) return;
-    document.getElementById("modal-extend-name").textContent = p.full_name;
-    document.getElementById("modal-extend-deadline").textContent = p.deadline_manila || "Current deadline";
-    document.getElementById("modal-extend-minutes").value = "5";
-    document.getElementById("modal-extend-note").value = "";
-    document.getElementById("modal-extend-error").hidden = true;
-    modal.dataset.attemptId = p.attempt_id;
-    modal.hidden = false;
-  });
-
-  window.addEventListener("open-void", function(e) {
-    const p = e.detail;
-    const modal = document.getElementById("modal-void");
-    if (!modal) return;
-    document.getElementById("modal-void-name").textContent = `${p.full_name} (Attempt #${p.attempt_no || 1})`;
-    document.getElementById("modal-void-reason").value = "";
-    document.getElementById("modal-void-error").hidden = true;
-    modal.dataset.attemptId = p.attempt_id;
-    modal.hidden = false;
-  });
-
-  // Wire modal form submissions if opened via event bridge
-  const extForm = document.getElementById("modal-extend-form");
-  if (extForm) {
-    extForm.addEventListener("submit", async function(ev) {
-      const modal = document.getElementById("modal-extend");
-      const attId = parseInt(modal.dataset.attemptId, 10);
-      if (!attId) return; // handled by live.js if openExtendModal was called
-      ev.preventDefault();
-      const min = parseInt(document.getElementById("modal-extend-minutes").value, 10);
-      const note = document.getElementById("modal-extend-note").value.trim();
-      const errEl = document.getElementById("modal-extend-error");
-      const btn = extForm.querySelector('button[type="submit"]');
-      if (btn) btn.disabled = true;
-
-      try {
-        const res = await fetch("/api/live.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({
-            action: "extend_time",
-            attempt_id: attId,
-            minutes: min,
-            note: note,
-            _csrf: document.getElementById("live-root").dataset.csrf
-          })
-        });
-        const json = await res.json();
-        if (!res.ok || !json.ok) throw new Error(json.error || "Extension failed");
-        modal.hidden = true;
-        location.reload();
-      } catch (err) {
-        if (errEl) {
-          errEl.textContent = err.message;
-          errEl.hidden = false;
-        }
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    });
-  }
-
-  const vdForm = document.getElementById("modal-void-form");
-  if (vdForm) {
-    vdForm.addEventListener("submit", async function(ev) {
-      const modal = document.getElementById("modal-void");
-      const attId = parseInt(modal.dataset.attemptId, 10);
-      if (!attId) return;
-      ev.preventDefault();
-      const reason = document.getElementById("modal-void-reason").value.trim();
-      const errEl = document.getElementById("modal-void-error");
-      const btn = vdForm.querySelector('button[type="submit"]');
-      if (btn) btn.disabled = true;
-
-      try {
-        const res = await fetch("/api/live.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({
-            action: "void_attempt",
-            attempt_id: attId,
-            reason: reason,
-            _csrf: document.getElementById("live-root").dataset.csrf
-          })
-        });
-        const json = await res.json();
-        if (!res.ok || !json.ok) throw new Error(json.error || "Void failed");
-        modal.hidden = true;
-        location.reload();
-      } catch (err) {
-        if (errEl) {
-          errEl.textContent = err.message;
-          errEl.hidden = false;
-        }
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    });
-  }
-</script>
 
 <?php
 teacher_end();

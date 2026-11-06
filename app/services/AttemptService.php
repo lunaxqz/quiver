@@ -1076,6 +1076,28 @@ final class AttemptService
         $scoreReleased  = $scoreReleasedAt !== null && $scoreReleasedAt <= $now;
         $reviewReleased = $reviewReleasedAt !== null && $reviewReleasedAt <= $now;
 
+        // Compute the student's effective final score across retakes according to score_policy ('highest' vs 'latest')
+        $scorePolicy = (string) ($att['score_policy'] ?? 'highest');
+        $attemptScore = $scoreReleased && $att['score'] !== null ? round((float) $att['score'], 2) : null;
+        $finalScore   = $attemptScore;
+        $effectiveAttemptNo = (int) $att['attempt_no'];
+
+        if ($scoreReleased && (int) $att['max_attempts'] > 1) {
+            $allStmt = $pdo->prepare(
+                "SELECT id, attempt_no, status, score, score_released_at
+                   FROM quiz_attempts
+                  WHERE quiz_id = ? AND student_id = ? AND status IN ('submitted', 'graded')
+                  ORDER BY attempt_no ASC, id ASC"
+            );
+            $allStmt->execute([$quizId, $studentId]);
+            $completedAtts = $allStmt->fetchAll();
+            $chosenAtt = ReportService::pickEffectiveAttempt($completedAtts, $scorePolicy);
+            if ($chosenAtt !== null && $chosenAtt['score'] !== null) {
+                $finalScore         = round((float) $chosenAtt['score'], 2);
+                $effectiveAttemptNo = (int) $chosenAtt['attempt_no'];
+            }
+        }
+
         $classLabel = trim(($att['course_code'] ?? '') . (($att['section'] ?? '') !== '' ? ', Section ' . $att['section'] : ''), ', ');
         if ($classLabel === '') {
             $classLabel = (string) $att['class_name'];
@@ -1091,8 +1113,9 @@ final class AttemptService
             'class_label'           => $classLabel,
             'teacher_name'          => (string) $att['teacher_name'],
             'attempt_no'            => (int) $att['attempt_no'],
+            'effective_attempt_no'  => $effectiveAttemptNo,
             'max_attempts'          => (int) $att['max_attempts'],
-            'score_policy'          => (string) $att['score_policy'],
+            'score_policy'          => $scorePolicy,
             'submit_reason'         => (string) ($att['submit_reason'] ?? 'student'),
             'submitted_at'          => $subAt,
             'submitted_manila'      => to_manila($subAt, 'j M Y, H:i:s'),
@@ -1108,9 +1131,10 @@ final class AttemptService
             'score_released_manila' => $scoreReleased ? to_manila((string) $scoreReleasedAt, 'j M Y, H:i') : '',
             'review_released'       => $reviewReleased,
             'review_released_manila'=> $reviewReleased ? to_manila((string) $reviewReleasedAt, 'j M Y, H:i') : '',
-            'score'                 => $scoreReleased && $att['score'] !== null ? round((float) $att['score'], 2) : null,
-            'percentage'            => $scoreReleased && $att['score'] !== null && $totalPoints > 0
-                ? (int) round(((float) $att['score'] / $totalPoints) * 100)
+            'score'                 => $finalScore,
+            'attempt_score'         => $attemptScore,
+            'percentage'            => $finalScore !== null && $totalPoints > 0
+                ? (int) round(($finalScore / $totalPoints) * 100)
                 : null,
             'review_items'          => [],
         ];

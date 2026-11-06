@@ -26,3 +26,4 @@ Stack trace:
 [06-Nov-2026 06:04:20 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19
 [06-Nov-2026 07:33:52 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19
 [06-Nov-2026 07:38:24 UTC] PHP Warning:  Undefined array key "id" in C:\quiver\tests\attempts.php on line 291
+[06-Nov-2026 08:00:36 UTC] PDOException: SQLSTATE[HY000] [2002] An attempt was made to access a socket in a way forbidden by its access permissions in C:\quiver\app\core\db.php:19

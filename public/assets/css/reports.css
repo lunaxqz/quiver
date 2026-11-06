@@ -1,0 +1,353 @@
+/* Day 16: Review release and reports (matches Figma "QUIVER Review release and reports.png") */
+
+.page-head h1 {
+  font-family: var(--font-read);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.btn-export-csv {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  padding: 8px 18px;
+  box-shadow: 0 1px 2px rgba(27, 26, 23, 0.04);
+}
+.btn-export-csv:hover {
+  border-color: var(--ink-2);
+}
+
+/* ---- Quiz Switcher Bar ---- */
+.reports-quiz-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+.reports-quiz-switcher__label {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.reports-quiz-switcher__select {
+  max-width: 400px;
+  padding: 6px 12px;
+  font-size: var(--t-sm);
+}
+
+/* ---- Top Summary Banner ---- */
+.rep-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+  padding: var(--s4) var(--s5);
+  margin-bottom: var(--s4);
+}
+
+.rep-banner__mark {
+  flex-shrink: 0;
+}
+
+.rep-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.rep-banner__title {
+  font-family: var(--font-read);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.rep-banner__sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.rep-banner__link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.rep-banner__link:hover {
+  text-decoration: underline;
+}
+
+/* ---- Side-by-Side Release Cards (Scores & Answer review) ---- */
+.rep-release-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+}
+
+.rep-release-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--s5);
+}
+
+.rep-release-card__title {
+  font-family: var(--font-read);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 var(--s3);
+}
+
+.rep-release-card__status {
+  margin-bottom: var(--s3);
+}
+
+.rep-release-card__desc {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  line-height: 1.5;
+  margin: 0 0 var(--s4);
+}
+
+.rep-release-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-top: auto;
+}
+
+.rep-release-card__meta {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.rep-btn-solid {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  padding: 9px 20px;
+}
+.rep-btn-solid:hover {
+  opacity: 0.92;
+}
+
+.rep-btn-outline {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  padding: 8px 18px;
+}
+.rep-btn-outline:hover:not(.is-disabled) {
+  border-color: var(--ink-2);
+}
+.rep-btn-outline.is-disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---- Collapsible Release Policy & Schedule Options ---- */
+.rep-schedule-details {
+  margin-bottom: var(--s4);
+}
+.rep-schedule-summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  user-select: none;
+  padding: var(--s1) 0;
+}
+.rep-schedule-summary:hover {
+  color: var(--ink);
+}
+.rep-schedule-form {
+  margin-top: var(--s2);
+  padding: var(--s4) var(--s5);
+}
+.rep-schedule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: var(--s3);
+  align-items: end;
+}
+.rep-schedule-grid .field {
+  margin: 0;
+}
+
+/* ---- 4-Column Class Statistics Strip ---- */
+.rep-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s4);
+  padding: var(--s3) var(--s2) var(--s4);
+  margin-bottom: var(--s2);
+}
+
+.rep-stat__val {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
+}
+
+.rep-stat__slash {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.rep-stat__lbl {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* ---- Student Results Table Card ---- */
+.rep-results-card {
+  padding: var(--s5);
+}
+
+.rep-results-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+  flex-wrap: wrap;
+}
+
+.rep-results-title {
+  font-family: var(--font-read);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.rep-results-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.rep-search-form {
+  min-width: 240px;
+}
+
+.rep-search-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.rep-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.rep-search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 14px;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+
+.rep-search-input {
+  width: 100%;
+  padding-left: 32px;
+  font-size: var(--t-sm);
+}
+
+.rep-table th {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: var(--s2) var(--s3) var(--s2) 0;
+}
+
+.rep-table td {
+  padding: var(--s4) var(--s3) var(--s4) 0;
+  font-size: var(--t-sm);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.rep-col-student strong {
+  font-weight: 500;
+  color: var(--ink);
+  display: block;
+}
+
+.rep-student-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+
+.rep-col-submitted,
+.rep-col-score,
+.rep-col-access {
+  color: var(--ink-2);
+}
+
+.rep-grade-link {
+  text-decoration: none;
+  color: inherit;
+}
+.rep-grade-link:hover {
+  text-decoration: underline;
+}
+
+.rep-results-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-top: var(--s4);
+  flex-wrap: wrap;
+}
+
+.rep-pager {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.rep-privacy-foot {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: var(--s4) 0 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 860px) {
+  .rep-release-grid {
+    grid-template-columns: 1fr;
+  }
+  .rep-stats-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rep-schedule-grid {
+    grid-template-columns: 1fr;
+  }
+  .rep-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s2);
+  }
+}

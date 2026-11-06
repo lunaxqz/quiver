@@ -6,7 +6,8 @@ declare(strict_types=1);
  *   1. tests/authz.php     who is allowed to see or change what
  *   2. tests/attempts.php  attempts, timer, autosave, grading, and reports
  *   3. tests/today.php     Today rail queries, ranking, and teacher scoping (Day 17)
- *   4. PHPUnit             the pure rules (score_multi, quiz_phase, quiz_blockers, rank_today)
+ *   4. tests/live.php      Live view, attention rows, time extension, and void attempt (Day 18)
+ *   5. PHPUnit             the pure rules (score_multi, quiz_phase, quiz_blockers, rank_today)
  * Exits with 1 if anything fails, so it can gate a commit.
  */
 
@@ -45,6 +46,9 @@ require __DIR__ . '/attempts.php';
 
 echo "\nToday rail and Teacher overview (Day 17)\n";
 require __DIR__ . '/today.php';
+
+echo "\nLive view, attention rows, time extension & void attempt (Day 18)\n";
+require __DIR__ . '/live.php';
 
 $failed = count($GLOBALS['quiver_fail']);
 echo "\n" . $GLOBALS['quiver_pass'] . ' passed, ' . $failed . " failed.\n";

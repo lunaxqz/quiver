@@ -1204,6 +1204,16 @@ final class AttemptService
 
     // ------------------------------------------------------------------ helpers
 
+    public static function extendTime(int $attemptId, int $actorUserId, bool $isAdmin, int $minutes, ?string $note = null, ?string $nowUtc = null): array
+    {
+        return LiveService::extendTime($attemptId, $actorUserId, $isAdmin, $minutes, $note, $nowUtc);
+    }
+
+    public static function voidAttempt(int $attemptId, int $actorUserId, bool $isAdmin, string $reason, ?string $nowUtc = null): array
+    {
+        return LiveService::voidAttempt($attemptId, $actorUserId, $isAdmin, $reason, $nowUtc);
+    }
+
     private static function visibleQuiz(int $studentId, int $quizId): ?array
     {
         $stmt = db()->prepare(

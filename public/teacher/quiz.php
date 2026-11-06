@@ -16,6 +16,9 @@ $quiz = QuizService::find($id, $teacherId);
 if (!$quiz) {
     abort_404();
 }
+if (isset($_GET['view']) && $_GET['view'] === 'live') {
+    redirect('/teacher/live.php?quiz_id=' . $id);
+}
 
 $isDraft   = $quiz['status'] === 'draft';
 $classes   = QuizService::activeClassesForTeacher($teacherId);

@@ -198,7 +198,7 @@ teacher_start(
                 <button class="linklike action-sub" type="submit">Restore</button>
               </form>
             <?php elseif ($phase === 'open'): ?>
-              <a class="action-main" href="/teacher/quiz.php?id=<?= (int) $r['id'] ?>">Live view →</a>
+              <a class="action-main" href="/teacher/live.php?quiz_id=<?= (int) $r['id'] ?>">Live view →</a>
               <form class="inline-form" method="post" action="/teacher/quizzes.php">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="duplicate">

@@ -196,9 +196,12 @@ final class AttemptService
     public static function payload(int $attemptId, int $studentId): ?array
     {
         $a = db()->prepare(
-            "SELECT a.id, a.quiz_id, a.attempt_no, a.status, a.started_at, a.deadline_at,
-                    q.title, q.instructions, q.max_attempts
-               FROM quiz_attempts a JOIN quizzes q ON q.id = a.quiz_id
+            "SELECT a.id, a.quiz_id, a.attempt_no, a.status, a.started_at, a.deadline_at, a.last_seen_at,
+                    q.title, q.instructions, q.max_attempts,
+                    c.name AS class_name, c.course_code, c.section
+               FROM quiz_attempts a
+               JOIN quizzes q ON q.id = a.quiz_id
+               JOIN classes c ON c.id = q.class_id
               WHERE a.id = ? AND a.student_id = ?"
         );
         $a->execute([$attemptId, $studentId]);
@@ -248,6 +251,39 @@ final class AttemptService
             ];
         }
 
+        $rs = db()->prepare(
+            'SELECT id, quiz_question_id, answer_text, revision FROM responses WHERE attempt_id = ?'
+        );
+        $rs->execute([$attemptId]);
+        $respRows = $rs->fetchAll();
+        $respIds = array_map(static fn($r) => (int) $r['id'], $respRows);
+        $pickedByResp = [];
+        if ($respIds) {
+            $inR = implode(',', array_fill(0, count($respIds), '?'));
+            $ros = db()->prepare(
+                "SELECT response_id, quiz_question_option_id FROM response_options
+                  WHERE response_id IN ($inR) ORDER BY quiz_question_option_id"
+            );
+            $ros->execute($respIds);
+            foreach ($ros->fetchAll() as $ro) {
+                $pickedByResp[(int) $ro['response_id']][] = (int) $ro['quiz_question_option_id'];
+            }
+        }
+        $responses = [];
+        foreach ($respRows as $r) {
+            $qid = (int) $r['quiz_question_id'];
+            $responses[$qid] = [
+                'answer_text' => (string) ($r['answer_text'] ?? ''),
+                'option_ids'  => $pickedByResp[(int) $r['id']] ?? [],
+                'revision'    => (int) $r['revision'],
+            ];
+        }
+
+        $classLabel = trim(($att['course_code'] ?? '') . (($att['section'] ?? '') !== '' ? ', Section ' . $att['section'] : ''), ', ');
+        if ($classLabel === '') {
+            $classLabel = (string) $att['class_name'];
+        }
+
         $remaining = max(0, (new DateTimeImmutable($att['deadline_at'], new DateTimeZone('UTC')))->getTimestamp() - time());
         return [
             'attempt' => [
@@ -256,14 +292,18 @@ final class AttemptService
                 'max_attempts'      => (int) $att['max_attempts'],
                 'status'            => (string) $att['status'],
                 'deadline_at'       => (string) $att['deadline_at'],
+                'deadline_manila'   => to_manila($att['deadline_at'], 'H:i'),
+                'saved_manila'      => $att['last_seen_at'] !== null ? to_manila((string) $att['last_seen_at'], 'j M Y, H:i:s') : '',
                 'remaining_seconds' => $att['status'] === 'in_progress' ? $remaining : 0,
             ],
             'quiz' => [
                 'id'           => (int) $att['quiz_id'],
                 'title'        => (string) $att['title'],
                 'instructions' => (string) ($att['instructions'] ?? ''),
+                'class_label'  => $classLabel,
             ],
             'questions' => $outQ,
+            'responses' => (object) $responses,
         ];
     }
 

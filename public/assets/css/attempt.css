@@ -1,0 +1,370 @@
+/* Student attempt screen (Figma: Student attempt · Day 12). Uses tokens.css. */
+
+.att { max-width: 720px; margin: 0 auto; }
+
+/* ---- Top bar: progress dots on left, server timer on right ---- */
+.att-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--s5);
+  margin-bottom: var(--s4);
+}
+
+.att-progress__summary {
+  margin: 0 0 var(--s2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.att-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+}
+
+.att-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--ink-3);
+  background: transparent;
+  color: var(--ink-2);
+  font: 500 12px/1 var(--font-ui);
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.att-dot:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Filled: answered */
+.att-dot.is-answered {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+/* Emphasised: current */
+.att-dot.is-current {
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--ink);
+}
+
+.att-dot.is-current.is-answered {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.att-dots__legend {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* ---- Server timer ---- */
+.att-timer {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.att-timer__label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 2px;
+}
+
+.att-timer__digits {
+  font-family: var(--font-ui);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: .02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.att-timer__ends {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* Color shift & "Final minute" at <= 60s, warning shift at <= 5 min */
+.att-timer.is-warning .att-timer__label,
+.att-timer.is-warning .att-timer__digits {
+  color: var(--attention);
+}
+
+.att-timer.is-final .att-timer__label,
+.att-timer.is-final .att-timer__digits {
+  color: var(--problem);
+  font-weight: 600;
+}
+
+/* ---- Question card ---- */
+.att-card {
+  background: var(--surface);
+  border-radius: var(--r-surface);
+  padding: var(--s5) 28px;
+  box-shadow: 0 1px 2px rgba(27,26,23,.06), 0 4px 16px rgba(27,26,23,.04);
+}
+
+.att-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+
+.att-type {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.att-points {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* ---- Fieldset + serif prompt + >=48px option rows ---- */
+.att-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.att-prompt {
+  padding: 0;
+  margin: 0 0 var(--s5);
+  width: 100%;
+  font-family: var(--font-read);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink);
+  white-space: pre-line;
+}
+
+.att-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.att-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 52px; /* >= 48px requirement */
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.att-option:hover {
+  border-color: var(--ink-3);
+}
+
+.att-option.is-selected {
+  border: 1.5px solid var(--ink);
+  padding: calc(var(--s3) - 0.5px) calc(var(--s4) - 0.5px);
+}
+
+.att-option__input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.att-option__control {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-3);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+
+.att-option--multi .att-option__control {
+  border-radius: 4px;
+}
+
+.att-option.is-selected .att-option__control {
+  border-color: var(--ink);
+}
+
+.att-option.is-selected .att-option__control::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.att-option--multi.is-selected .att-option__control::after {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.att-option:focus-within {
+  outline: 2px solid var(--active);
+  outline-offset: 2px;
+}
+
+.att-option__key {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-3);
+  min-width: 14px;
+  text-transform: uppercase;
+}
+
+.att-option__label {
+  flex: 1;
+  font-size: var(--t-base);
+  color: var(--ink);
+}
+
+.att-option.is-selected .att-option__label {
+  font-weight: 500;
+}
+
+.att-option__state {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-left: auto;
+}
+
+/* ---- Written response inputs (short / essay) ---- */
+.att-written {
+  width: 100%;
+  font: var(--t-base)/1.5 var(--font-ui);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  padding: var(--s3) var(--s4);
+}
+
+.att-written--short {
+  min-height: 48px;
+}
+
+.att-written--essay {
+  min-height: 168px;
+  font-family: var(--font-read);
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.att-written:focus {
+  border-color: var(--ink);
+  outline: 2px solid var(--active);
+  outline-offset: 1px;
+}
+
+/* ---- Save status line inside card ---- */
+.att-saved {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--s4);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.att-saved__check {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* ---- Bottom navigation bar ---- */
+.att-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s5);
+}
+
+.att-nav .btn--pill {
+  padding: 8px 18px;
+  min-height: 38px;
+  font-size: 13px;
+}
+
+.att-nav__prev {
+  border-color: var(--line);
+  background: rgba(27,26,23,.04);
+  color: var(--ink-2);
+}
+
+.att-nav__prev:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.att-nav__review {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(27,26,23,.04);
+}
+
+.att-nav__review:hover,
+.att-nav__prev:not(:disabled):hover {
+  border-color: var(--ink-3);
+}
+
+.att-foot {
+  margin-top: var(--s4);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+@media (max-width: 640px) {
+  .att-bar {
+    flex-direction: column;
+    gap: var(--s3);
+  }
+  .att-timer {
+    text-align: left;
+  }
+  .att-card {
+    padding: var(--s4);
+  }
+  .att-nav {
+    flex-wrap: wrap;
+  }
+}

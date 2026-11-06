@@ -107,6 +107,15 @@ try {
         count($payload['questions'][0]['options']) === 3 && $payload['questions'][1]['options'] === []
         && $payload['questions'][2]['options'] === [] && count($payload['questions'][3]['options']) === 2);
     check('the browser gets remaining seconds from the server', $payload['attempt']['remaining_seconds'] > 1700 && $payload['attempt']['remaining_seconds'] <= 1800);
+    check('the browser gets Manila deadline and empty responses map on a fresh attempt',
+        $payload['attempt']['deadline_manila'] !== '' && is_object($payload['responses']) && count((array) $payload['responses']) === 0);
+
+    // Simulate an elapsed-time reload: move deadline_at to 12 minutes from now and confirm payload recomputes remaining_seconds.
+    $twelveMinLater = gmdate('Y-m-d H:i:s', time() + 720);
+    $pdo->prepare('UPDATE quiz_attempts SET deadline_at = ? WHERE id = ?')->execute([$twelveMinLater, (int) $first['attempt_id']]);
+    $reloaded = AttemptService::payload((int) $first['attempt_id'], $student);
+    check('reloading mid-quiz recomputes remaining_seconds from the server clock',
+        $reloaded !== null && $reloaded['attempt']['remaining_seconds'] > 700 && $reloaded['attempt']['remaining_seconds'] <= 720);
 
     // Same check on the real page HTML, by rendering attempt.php's JSON exactly as it is printed.
     $html = json_encode($payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
